@@ -1,0 +1,79 @@
+/* Theme tokens. ui/theme.ts swaps these for the selected night. */
+:root {
+  --bg: #4a0c17;
+  --bg2: #7a1a2a;
+  --panel: #3a0911;
+  --ink: #fbeedd;
+  --muted: rgba(251, 238, 221, 0.68);
+  --line: rgba(251, 238, 221, 0.16);
+  --chip: rgba(251, 238, 221, 0.08);
+  --accent: #f2a51a;
+  --accent-ink: #2a0a06;
+  --display: "Baloo Bhai 2", "Noto Sans Gujarati", system-ui, sans-serif;
+  --body: "Hind Vadodara", "Noto Sans Gujarati", system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.45;
+  overflow: hidden;
+  transition: background 0.5s ease;
+}
+
+button,
+select,
+input {
+  font-family: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.app {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.studio {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  min-height: 0;
+}
+
+/* Laptop only (§6): below 1024 px wide, show a friendly message instead of the app. */
+.narrow { display: none; }
+@media (max-width: 1023.98px) {
+  .app, .play-panel { display: none !important; }
+  body { overflow: auto; }
+  .narrow {
+    display: grid; place-items: center; min-height: 100%; box-sizing: border-box; padding: 32px 24px;
+    text-align: center;
+    background: radial-gradient(circle at center, var(--bg2), var(--bg) 75%);
+  }
+  .narrow > div { max-width: 420px; }
+  .narrow .gu { font-family: var(--display); font-weight: 800; font-size: 44px; line-height: 1; margin: 0 0 12px; color: var(--accent); }
+  .narrow h1 { font-family: var(--display); font-weight: 700; font-size: 24px; margin: 0 0 10px; }
+  .narrow p { margin: 0; color: var(--muted); }
+}

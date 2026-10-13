@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.vite/
+
+# Personal song files: never commit or publish (PRD §12)
+music/

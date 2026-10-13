@@ -1,0 +1,1196 @@
+<title>Raas Mandal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhai+2:wght@500;600;700;800&family=Hind+Vadodara:wght@400;500;600&display=swap">
+<style>
+/* Layout: laptop studio. Fixed left control panel, live garba ground on the right; Play mode turns the ground full screen.
+   Single committed look per Navratri night: JS swaps these tokens for the chosen day. */
+:root {
+  --bg: #4a0c17;        /* deep shade of the day colour */
+  --bg2: #7a1a2a;       /* glow at the centre of the ground */
+  --panel: #3a0911;     /* control panel */
+  --ink: #fbeedd;       /* text */
+  --muted: rgba(251,238,221,.68);
+  --line: rgba(251,238,221,.16);
+  --chip: rgba(251,238,221,.08);
+  --accent: #f2a51a;    /* marigold highlight */
+  --accent-ink: #2a0a06;
+  --display: "Baloo Bhai 2", "Noto Sans Gujarati", system-ui, sans-serif;
+  --body: "Hind Vadodara", "Noto Sans Gujarati", system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--body); font-size: 15px; line-height: 1.45;
+  transition: background .5s ease;
+  overflow: hidden;
+}
+button, select, input { font-family: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+
+/* Header */
+.top {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 12px 20px; border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.brand .gu { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1; letter-spacing: .01em; color: var(--accent); }
+.brand .en { font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.top .spacer { flex: 1; }
+.tonight { font-size: 14px; color: var(--muted); }
+.tonight b { color: var(--ink); font-weight: 600; }
+.play-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--accent); color: var(--accent-ink); border: 0;
+  font-family: var(--display); font-weight: 700; font-size: 17px;
+  padding: 9px 22px 7px; border-radius: 999px;
+  box-shadow: 0 6px 22px -8px var(--accent);
+}
+.play-btn svg { width: 14px; height: 14px; margin-top: -2px; }
+.play-btn:hover { filter: brightness(1.08); }
+
+/* Studio */
+.studio { display: grid; grid-template-columns: 400px 1fr; min-height: 0; }
+.panel {
+  background: var(--panel); border-right: 1px solid var(--line);
+  overflow-y: auto; padding: 4px 20px 40px; transition: background .5s ease;
+}
+.sec { padding-block: 18px; border-bottom: 1px solid var(--line); display: grid; gap: 12px; }
+.sec:last-child { border-bottom: 0; }
+.sec-h { display: flex; align-items: baseline; gap: 10px; }
+.sec-h .gu { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1; }
+.sec-h .en { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.note { font-size: 13px; color: var(--muted); margin: 0; }
+
+/* Day picker */
+.days { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
+.day {
+  background: none; border: 0; padding: 0; display: grid; justify-items: center; gap: 4px;
+  font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.day .sw { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); box-shadow: inset 0 0 0 2px rgba(0,0,0,.15); }
+.day[aria-pressed="true"] { color: var(--ink); font-weight: 600; }
+.day[aria-pressed="true"] .sw { border-color: var(--ink); box-shadow: 0 0 0 3px var(--accent); }
+.day-info { font-size: 14px; }
+.day-info b { font-weight: 600; }
+
+/* Segmented controls */
+.seg { display: flex; background: var(--chip); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg button {
+  flex: 1; border: 0; background: none; padding: 7px 8px 5px; border-radius: 8px;
+  font-size: 13px; color: var(--muted); line-height: 1.15;
+}
+.seg button .gu { display: block; font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg button[aria-pressed="true"] .gu { color: var(--accent-ink); }
+.seg.small button { padding: 5px 6px; font-size: 12.5px; }
+
+.row { display: flex; align-items: center; gap: 10px; }
+.row label { font-size: 13.5px; }
+.grow { flex: 1; min-width: 0; }
+
+/* Switch */
+.switch { position: relative; width: 42px; height: 24px; flex: none; }
+.switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.switch span { position: absolute; inset: 0; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); transition: background .2s; pointer-events: none; }
+.switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); transition: transform .2s; }
+.switch input:checked + span { background: var(--accent); }
+.switch input:checked + span::after { transform: translateX(18px); background: var(--accent-ink); }
+.switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.bpm { font-family: var(--display); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; min-width: 72px; text-align: right; }
+.ghost {
+  background: var(--chip); border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 12px 4px; font-size: 13px; font-weight: 600;
+}
+.ghost:hover { border-color: var(--muted); }
+
+/* Songs */
+.songs { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.songs a {
+  display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink);
+  padding: 7px 8px; border-radius: 8px;
+}
+.songs a:hover { background: var(--chip); }
+.songs .t { font-weight: 600; font-size: 14px; line-height: 1.2; }
+.songs .s { font-size: 12px; color: var(--muted); }
+.songs .yt { margin-left: auto; font-size: 12px; color: var(--accent); white-space: nowrap; }
+
+.song { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; }
+.song.on { background: var(--chip); box-shadow: inset 3px 0 0 var(--accent); }
+.song .meta { min-width: 0; flex: 1; line-height: 1.2; }
+.song .act { display: flex; gap: 6px; align-items: center; flex: none; }
+.songs li { display: grid; gap: 6px; }
+.mini {
+  border: 1px solid var(--line); background: var(--chip); border-radius: 999px;
+  padding: 4px 11px 2px; font-size: 12.5px; font-weight: 600; white-space: nowrap; text-decoration: none; color: var(--ink);
+}
+.mini.go { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.mini.x { padding: 4px 8px 2px; }
+.linkrow { display: flex; gap: 6px; }
+.linkrow input { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; font-size: 13px; }
+.linkrow .find { align-self: center; font-size: 12px; color: var(--accent); white-space: nowrap; }
+.sync { font-size: 12px; color: var(--muted); }
+.sync.ok { color: var(--accent); }
+.msg { font-size: 13px; color: var(--accent); margin: 0; }
+.tv {
+  position: absolute; right: 16px; top: 14px; width: 356px; max-width: calc(100% - 32px); aspect-ratio: 16 / 9; z-index: 2;
+  border-radius: 12px; overflow: hidden; background: #000; border: 2px solid var(--accent);
+  box-shadow: 0 12px 32px -12px rgba(0,0,0,.7);
+}
+.tv iframe { width: 100%; height: 100%; display: block; border: 0; }
+body.playing .tv { z-index: 6; }
+
+/* Rings */
+.stepper { display: inline-flex; align-items: center; background: var(--chip); border-radius: 10px; }
+.stepper button { width: 34px; height: 32px; border: 0; background: none; font-size: 18px; font-weight: 600; }
+.stepper button:disabled { opacity: .3; cursor: default; }
+.stepper output { min-width: 28px; text-align: center; font-family: var(--display); font-weight: 700; font-size: 18px; }
+.rings { display: grid; gap: 10px; }
+.ring {
+  display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px;
+  background: var(--chip);
+}
+.ring-h { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; }
+.ring-h .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex: none; }
+.ring-h .hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+.dir-btn {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid var(--line); border-radius: 8px; padding: 3px 9px 2px; font-size: 12.5px;
+}
+.dir-btn svg { width: 15px; height: 15px; }
+select {
+  width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 8px; font-size: 13px;
+}
+
+/* Centre */
+.centres { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.centre {
+  border: 1px solid var(--line); background: var(--chip); border-radius: 10px;
+  padding: 8px 4px 6px; display: grid; justify-items: center; gap: 2px; line-height: 1.1;
+}
+.centre .gu { font-family: var(--display); font-weight: 700; font-size: 15px; }
+.centre .en { font-size: 11px; color: var(--muted); }
+.centre[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.centre[aria-pressed="true"] .en { color: var(--ink); }
+
+/* Steps */
+.lib { display: flex; flex-wrap: wrap; gap: 6px; }
+.lib button {
+  border: 1px dashed var(--muted); background: none; border-radius: 999px;
+  padding: 4px 11px 2px; font-size: 13px; display: inline-flex; gap: 6px; align-items: baseline;
+}
+.lib button .gu { font-family: var(--display); font-weight: 700; }
+.lib button:hover { border-style: solid; border-color: var(--accent); }
+.seq { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.seq li {
+  display: grid; grid-template-columns: 22px 1fr auto auto; align-items: center; gap: 8px;
+  background: var(--chip); border-radius: 10px; padding: 6px 6px 6px 10px;
+}
+.seq li.now { box-shadow: inset 3px 0 0 var(--accent); }
+.seq .n { font-family: var(--display); font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.seq .nm { min-width: 0; line-height: 1.15; }
+.seq .nm .gu { font-family: var(--display); font-weight: 700; font-size: 16px; }
+.seq .nm .en { font-size: 12px; color: var(--muted); }
+.beats { display: inline-flex; align-items: center; gap: 2px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.beats button, .ops button {
+  width: 26px; height: 26px; border: 0; border-radius: 6px; background: none; font-size: 15px; line-height: 1;
+}
+.beats button:hover, .ops button:hover { background: var(--chip); }
+.beats span { min-width: 54px; text-align: center; }
+.ops { display: inline-flex; }
+.ops button:disabled { opacity: .25; cursor: default; }
+.empty { font-size: 13px; color: var(--muted); padding: 10px; border: 1px dashed var(--line); border-radius: 10px; }
+
+/* Stage */
+.stage { position: relative; min-width: 0; min-height: 0; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.stage-tag {
+  position: absolute; left: 16px; top: 14px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); pointer-events: none;
+}
+.now-step {
+  position: absolute; left: 16px; bottom: 14px; pointer-events: none; line-height: 1.1;
+}
+.now-step .gu { font-family: var(--display); font-weight: 800; font-size: 26px; }
+.now-step .en { font-size: 13px; color: var(--muted); }
+
+/* Play bar */
+.playbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+  display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center;
+  background: linear-gradient(to top, var(--panel) 55%, transparent);
+}
+.pb-step { line-height: 1.05; min-width: 170px; }
+.pb-step .gu { font-family: var(--display); font-weight: 800; font-size: 30px; }
+.pb-step .en { font-size: 13px; color: var(--muted); }
+.progress { display: flex; gap: 4px; height: 8px; min-width: 0; }
+.progress i { display: block; height: 100%; border-radius: 4px; background: var(--line); position: relative; overflow: hidden; }
+.progress i b { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
+.pb-ctrls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.pb-ctrls .bpm { min-width: 0; font-size: 16px; }
+.icon-btn {
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--chip);
+  display: inline-grid; place-items: center;
+}
+.icon-btn svg { width: 16px; height: 16px; }
+.icon-btn[aria-pressed="false"] { opacity: .5; }
+
+body.playing .top, body.playing .panel, body.playing .stage-tag, body.playing .now-step { display: none; }
+body.playing .studio { grid-template-columns: 1fr; }
+body.playing .app { grid-template-rows: 1fr; }
+
+@media (max-width: 860px) {
+  body { overflow: auto; }
+  .app { height: auto; display: block; }
+  .studio { grid-template-columns: 1fr; }
+  .stage { height: min(100vw, 70vh); order: -1; display: block; }
+  .studio { display: flex; flex-direction: column; }
+  .panel { border-right: 0; }
+  body.playing .stage { position: fixed; inset: 0; height: auto; }
+  .playbar { grid-template-columns: 1fr; gap: 10px; }
+  .pb-ctrls { justify-content: flex-start; }
+  .days { gap: 4px; }
+  .day .sw { width: 26px; height: 26px; }
+}
+@media (max-width: 420px) {
+  .centres { grid-template-columns: repeat(3, 1fr); }
+  .tonight { display: none; }
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="gu">રાસ મંડળ</span><span class="en">Raas Mandal</span></div>
+    <div class="spacer"></div>
+    <div class="tonight" id="tonight"></div>
+    <button class="play-btn" id="playBtn"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1l11 6-11 6z" fill="currentColor"/></svg>Play garba</button>
+  </header>
+
+  <main class="studio">
+    <aside class="panel" aria-label="Build your garba">
+      <section class="sec">
+        <div class="sec-h"><span class="gu">નોરતું</span><span class="en">Night</span></div>
+        <div class="days" id="days"></div>
+        <div class="day-info" id="dayInfo"></div>
+      </section>
+
+      <section class="sec">
+        <div class="sec-h"><span class="gu">સંગીત</span><span class="en">Music</span></div>
+        <div class="seg" id="genre">
+          <button data-g="filmi"><span class="gu">ફિલ્મી</span>Garba from Hindi films</button>
+          <button data-g="traditional"><span class="gu">પરંપરાગત</span>Folk garba &amp; raas</button>
+        </div>
+        <div class="row">
+          <label class="grow" for="dholOn">Built-in dhol beat</label>
+          <span class="switch"><input type="checkbox" id="dholOn" role="switch"><span></span></span>
+        </div>
+        <div class="row">
+          <label for="bpm">Tempo</label>
+          <input class="grow" type="range" id="bpm" min="70" max="180" step="1">
+          <span class="bpm" id="bpmOut"></span>
+          <button class="ghost" id="tap" title="Tap on every beat of the song to sync the dancers">Tap beat</button>
+        </div>
+        <form class="linkrow" id="addForm"><input id="addUrl" placeholder="Paste any YouTube link" aria-label="YouTube link"><button class="ghost" type="submit">Add song</button></form>
+        <p class="msg" id="ytMsg" hidden></p>
+        <ul class="songs" id="songs"></ul>
+        <p class="note">Play a song, then press <b>Tap beat</b> on every beat for a few seconds. The dancers lock onto the song, and the sync is saved for that song.</p>
+      </section>
+
+      <section class="sec">
+        <div class="sec-h"><span class="gu">ગોળ</span><span class="en">Circles</span></div>
+        <div class="row">
+          <span class="grow">Number of circles</span>
+          <span class="stepper"><button id="ringMinus" aria-label="Fewer circles">−</button><output id="ringCount"></output><button id="ringPlus" aria-label="More circles">+</button></span>
+        </div>
+        <div class="rings" id="rings"></div>
+      </section>
+
+      <section class="sec">
+        <div class="sec-h"><span class="gu">મધ્યમાં</span><span class="en">In the centre</span></div>
+        <div class="centres" id="centres"></div>
+      </section>
+
+      <section class="sec">
+        <div class="sec-h"><span class="gu">સ્ટેપ્સ</span><span class="en">Steps</span></div>
+        <p class="note">Add steps in the order you want. Every circle dances the sequence together, and it loops.</p>
+        <div class="lib" id="lib"></div>
+        <ol class="seq" id="seq"></ol>
+      </section>
+    </aside>
+
+    <section class="stage" id="stage">
+      <canvas id="cv" aria-label="Animated garba circles"></canvas>
+      <div class="tv" id="tv" hidden><div id="yt"></div></div>
+      <div class="stage-tag">Preview</div>
+      <div class="now-step" id="nowStep"></div>
+    </section>
+  </main>
+</div>
+
+<div class="playbar" id="playbar" hidden>
+  <div class="pb-step" id="pbStep"></div>
+  <div class="progress" id="progress"></div>
+  <div class="pb-ctrls">
+    <button class="icon-btn" id="pbDhol" title="Dhol beat on or off" aria-label="Dhol beat"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6v4h3l4 3V3L5 6z" fill="currentColor"/><path d="M11 5.5a3.5 3.5 0 010 5M12.5 3.5a6 6 0 010 9" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></button>
+    <button class="icon-btn" id="pbSlower" aria-label="Slower">−</button>
+    <span class="bpm" id="pbBpm"></span>
+    <button class="icon-btn" id="pbFaster" aria-label="Faster">+</button>
+    <span class="sync" id="pbSync"></span>
+    <button class="ghost" id="pbTap">Tap beat</button>
+    <button class="icon-btn" id="pbPause" aria-label="Pause"></button>
+    <button class="ghost" id="pbExit">Back to build</button>
+  </div>
+</div>
+
+<script>
+(() => {
+// ---------- Data ----------
+const DAYS = [
+  { n:1, name:"Orange", devi:"Maa Shailaputri", date:"Sun 11 Oct", wear:"#f07a1a",
+    bg:"#5e2205", bg2:"#9a4510", panel:"#4a1a03", ink:"#fdeedc", accent:"#2fb5b0", accentInk:"#04201f", outfits:["#2e3a8c","#0f8a8a","#c2187a"] },
+  { n:2, name:"White", devi:"Maa Brahmacharini", date:"Mon 12 Oct", wear:"#f6f1e6",
+    bg:"#ece2cc", bg2:"#fbf6ea", panel:"#e2d6bb", ink:"#2a1a12", accent:"#b3122e", accentInk:"#fff4ec", outfits:["#b3122e","#23317a","#e8961c"], light:true },
+  { n:3, name:"Red", devi:"Maa Chandraghanta", date:"Tue 13 Oct", wear:"#c8102e",
+    bg:"#4a0c17", bg2:"#7a1a2a", panel:"#3a0911", ink:"#fbeedd", accent:"#f2a51a", accentInk:"#2a0a06", outfits:["#f2a51a","#108a5a","#f4ead2"] },
+  { n:4, name:"Royal Blue", devi:"Maa Kushmanda", date:"Wed 14 Oct", wear:"#2547c4",
+    bg:"#121848", bg2:"#25307c", panel:"#0d1238", ink:"#f3eefc", accent:"#f07f13", accentInk:"#1e0c02", outfits:["#e0307f","#f07f13","#e9b52c"] },
+  { n:5, name:"Yellow", devi:"Maa Skandamata", date:"Thu 15 Oct", wear:"#f2c315",
+    bg:"#6e4c02", bg2:"#a8780a", panel:"#573c02", ink:"#fff4d6", accent:"#ffd23d", accentInk:"#3a1a00", outfits:["#7d1027","#2a45b8","#4c9a2a"] },
+  { n:6, name:"Green", devi:"Maa Katyayani", date:"Fri 16 Oct", wear:"#2e9a3e",
+    bg:"#0c3320", bg2:"#17573a", panel:"#082618", ink:"#eefae9", accent:"#e8b92d", accentInk:"#201500", outfits:["#e0307f","#f2741a","#e8b92d"] },
+  { n:7, name:"Grey", devi:"Maa Kalaratri", date:"Sat 17 Oct", wear:"#8d9096",
+    bg:"#25272d", bg2:"#41444d", panel:"#1c1e23", ink:"#f2f0ec", accent:"#f2a51a", accentInk:"#241500", outfits:["#f2a51a","#d6278a","#1fb3b3"] },
+  { n:8, name:"Purple", devi:"Maa Mahagauri", date:"Sun 18 Oct", wear:"#7b2fa6",
+    bg:"#341038", bg2:"#5a1d60", panel:"#280b2b", ink:"#fbeef8", accent:"#f5b324", accentInk:"#2a1600", outfits:["#f5b324","#7cc23a","#f2695a"] },
+  { n:9, name:"Peacock Green", devi:"Maa Siddhidatri", date:"Mon 19 Oct", wear:"#0f8f86",
+    bg:"#053836", bg2:"#0b5d58", panel:"#032a28", ink:"#e9fbf8", accent:"#e3b23c", accentInk:"#211500", outfits:["#d4692b","#c51e7a","#e3b23c"] },
+];
+
+const GENRES = {
+  filmi: { bpm: 124, songs: [
+    ["Dholi Taro Dhol Baaje","Hum Dil De Chuke Sanam, 1999"],
+    ["Nagada Sang Dhol","Goliyon Ki Raasleela Ram-Leela, 2013"],
+    ["Dholida","Gangubai Kathiawadi, 2022"],
+    ["Chogada","Loveyatri, 2018"],
+    ["Shubhaarambh","Kai Po Che!, 2013"],
+    ["Udi Udi Jaye","Raees, 2017"],
+  ]},
+  traditional: { bpm: 104, songs: [
+    ["Pankhida","Gujarati folk garba"],
+    ["Sanedo","Kutchi folk"],
+    ["Ma Pava Te Gadh Thi Utarya","Traditional garba"],
+    ["Tara Vina Shyam Mane Ekaldu Lage","Folk raas"],
+    ["Odhni Odhu Odhu Ne Udi Jay","Folk garba"],
+  ]},
+};
+
+const STEPS = {
+  be:      { gu:"બે તાળી",   en:"Be Taali · two-clap",     unit:4, travel:1.0 },
+  tran:    { gu:"ત્રણ તાળી", en:"Tran Taali · three-clap", unit:4, travel:1.1 },
+  dodhiyu: { gu:"દોઢિયું",   en:"Dodhiyu · fast hop",      unit:4, travel:1.8 },
+  hinch:   { gu:"હીંચ",      en:"Hinch · sway in 6/8",     unit:2, travel:0.7 },
+  spin:    { gu:"ફુદરડી",    en:"Fudardi · spin",          unit:2, travel:1.2 },
+  dandiya: { gu:"દાંડિયા",   en:"Dandiya · pairs",         unit:4, travel:0.6 },
+};
+
+const CENTRES = {
+  garbo:  { gu:"ગરબો", en:"Garbo" },
+  jyot:   { gu:"જ્યોત", en:"Akhand jyot" },
+  mataji: { gu:"માતાજી", en:"Mataji" },
+  mandvi: { gu:"માંડવી", en:"Mandvi" },
+  pillar: { gu:"થાંભલો", en:"Light pillar" },
+  dhol:   { gu:"ઢોલ", en:"Dhol stage" },
+  rangoli:{ gu:"રંગોળી", en:"Rangoli" },
+};
+
+// ---------- State ----------
+function todayDay() {
+  const d = new Date(); const start = new Date(2026, 9, 11);
+  const diff = Math.floor((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - start) / 86400000);
+  return diff >= 0 && diff <= 8 ? diff : 0;
+}
+const DEFAULT = {
+  day: todayDay(), genre: "filmi", bpm: 124, dhol: true, centre: "garbo",
+  rings: [ {g:"f", dir:1, color:"day"}, {g:"alt", dir:-1, color:"day"}, {g:"m", dir:1, color:"day"} ],
+  seq: [ {s:"be",b:8}, {s:"tran",b:8}, {s:"hinch",b:8}, {s:"dodhiyu",b:16}, {s:"spin",b:4}, {s:"dandiya",b:8} ],
+};
+const KEY = "raasMandal.v1";
+let S;
+try { S = Object.assign({}, DEFAULT, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) { S = Object.assign({}, DEFAULT); }
+S.day = todayDay(); // always open on tonight's colour
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+// ---------- Helpers ----------
+const $ = id => document.getElementById(id);
+const el = (tag, attrs = {}, html = "") => { const e = document.createElement(tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (html) e.innerHTML = html; return e; };
+function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function shade(h, amt) { const [r,g,b] = hexToRgb(h); const f = c => Math.max(0, Math.min(255, Math.round(amt < 0 ? c * (1 + amt) : c + (255 - c) * amt))); return `rgb(${f(r)},${f(g)},${f(b)})`; }
+function lum(h) { const [r,g,b] = hexToRgb(h); return (0.299*r + 0.587*g + 0.114*b) / 255; }
+const G = (x, c, w = 0.12) => Math.exp(-((x - c) * (x - c)) / (2 * w * w));
+const TAU = Math.PI * 2;
+
+// ---------- Theme ----------
+function applyTheme() {
+  const d = DAYS[S.day], r = document.documentElement.style;
+  r.setProperty("--bg", d.bg); r.setProperty("--bg2", d.bg2); r.setProperty("--panel", d.panel);
+  r.setProperty("--ink", d.ink); r.setProperty("--accent", d.accent); r.setProperty("--accent-ink", d.accentInk);
+  const [ir, ig, ib] = hexToRgb(d.ink);
+  r.setProperty("--muted", `rgba(${ir},${ig},${ib},.68)`);
+  r.setProperty("--line", `rgba(${ir},${ig},${ib},.16)`);
+  r.setProperty("--chip", `rgba(${ir},${ig},${ib},.08)`);
+  r.setProperty("color-scheme", d.light ? "light" : "dark");
+  $("tonight").innerHTML = `Night ${d.n} · <b>${d.name}</b> · ${d.date}`;
+}
+
+// ---------- UI rendering ----------
+function renderDays() {
+  const box = $("days"); box.innerHTML = "";
+  DAYS.forEach((d, i) => {
+    const b = el("button", { class: "day", "aria-pressed": String(i === S.day), "aria-label": `Night ${d.n}, ${d.name}` },
+      `<span class="sw" style="background:${d.wear}"></span>${d.n}`);
+    b.onclick = () => { S.day = i; save(); applyTheme(); renderDays(); renderRings(); buildPatterns(); };
+    box.appendChild(b);
+  });
+  const d = DAYS[S.day];
+  $("dayInfo").innerHTML = `<b>Night ${d.n} · ${d.name}</b> — ${d.devi}, ${d.date}`;
+}
+
+// ---------- Songs ----------
+if (!S.songs) S.songs = {};
+for (const g in GENRES) if (!Array.isArray(S.songs[g])) S.songs[g] = GENRES[g].songs.map(([t, s]) => ({ t, s, id: null }));
+let cur = null, editIdx = -1;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function ytId(u) {
+  u = (u || "").trim();
+  const m = u.match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([\w-]{11})/);
+  if (m) return m[1];
+  return /^[\w-]{11}$/.test(u) ? u : null;
+}
+const curSong = () => cur ? S.songs[cur.g][cur.i] : null;
+const findUrl = sg => `https://www.youtube.com/results?search_query=${encodeURIComponent(`${sg.t} ${sg.s.split(",")[0]}`)}`;
+function syncLabel(sg) { return sg.off != null ? `Synced · ${Math.round(sg.bpm)} bpm` : "Not synced yet"; }
+
+function renderGenre() {
+  [...$("genre").children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.g === S.genre)));
+  const ul = $("songs"); ul.innerHTML = "";
+  const list = S.songs[S.genre];
+  list.forEach((sg, i) => {
+    const li = el("li");
+    const isCur = cur && cur.g === S.genre && cur.i === i;
+    const row = el("div", { class: "song" + (isCur ? " on" : "") });
+    let act = "";
+    if (sg.id && !ytFailed) act = `<button class="mini${isCur && ytState === 1 ? "" : " go"}" data-a="play">${isCur && ytState === 1 ? "Pause" : "▶ Play"}</button>`;
+    else if (sg.id) act = `<a class="mini go" href="https://www.youtube.com/watch?v=${sg.id}" target="_blank" rel="noopener">YouTube ↗</a>`;
+    else act = `<button class="mini" data-a="link">Add link</button>`;
+    if (sg.mine) act += `<button class="mini x" data-a="del" aria-label="Remove song">×</button>`;
+    else if (sg.id) act += `<button class="mini x" data-a="link" aria-label="Change link" title="Change link">✎</button>`;
+    row.innerHTML = `<span class="meta"><span class="t">${esc(sg.t)}</span><br><span class="s">${esc(sg.s)}</span>${sg.id ? `<br><span class="sync${sg.off != null ? " ok" : ""}">${syncLabel(sg)}</span>` : ""}</span><span class="act">${act}</span>`;
+    row.onclick = e => {
+      const a = e.target.closest("button")?.dataset.a; if (!a) return;
+      if (a === "play") { if (isCur && ytState === 1) player.pauseVideo(); else if (isCur && player) player.playVideo(); else playSong(S.genre, i); }
+      if (a === "link") { editIdx = editIdx === i ? -1 : i; renderGenre(); setTimeout(() => $(`link${i}`)?.focus(), 0); }
+      if (a === "del") { if (isCur) stopSong(); list.splice(i, 1); save(); renderGenre(); }
+    };
+    li.appendChild(row);
+    if (editIdx === i) {
+      const f = el("form", { class: "linkrow" },
+        `<input id="link${i}" placeholder="Paste the YouTube link" aria-label="YouTube link for ${esc(sg.t)}" value="${sg.id ? `https://youtu.be/${sg.id}` : ""}"><button class="ghost" type="submit">Save</button><a class="find" href="${findUrl(sg)}" target="_blank" rel="noopener">Find ↗</a>`);
+      f.onsubmit = e => {
+        e.preventDefault(); const id = ytId(f.querySelector("input").value);
+        if (!id) { showMsg("That doesn't look like a YouTube link. Copy the address of the video and paste it here."); return; }
+        if (sg.id !== id) { sg.id = id; delete sg.off; delete sg.bpm; }
+        editIdx = -1; hideMsg(); save(); renderGenre();
+        if (!ytFailed) playSong(S.genre, i);
+      };
+      li.appendChild(f);
+    }
+    ul.appendChild(li);
+  });
+}
+function showMsg(t) { $("ytMsg").textContent = t; $("ytMsg").hidden = false; }
+function hideMsg() { $("ytMsg").hidden = true; }
+$("addForm").onsubmit = e => {
+  e.preventDefault(); const id = ytId($("addUrl").value);
+  if (!id) { showMsg("That doesn't look like a YouTube link. Copy the address of the video and paste it here."); return; }
+  hideMsg(); $("addUrl").value = "";
+  S.songs[S.genre].push({ t: "Your song", s: "Added by you", id, mine: true }); save();
+  renderGenre(); if (!ytFailed) playSong(S.genre, S.songs[S.genre].length - 1);
+};
+
+// ---------- YouTube player ----------
+let player = null, ytReady = false, ytFailed = false, ytState = -1;
+function loadYT() {
+  window.onYouTubeIframeAPIReady = () => { ytReady = true; renderGenre(); };
+  const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api";
+  s.onerror = ytFail; document.head.appendChild(s);
+  setTimeout(() => { if (!ytReady) ytFail(); }, 7000);
+}
+function ytFail() {
+  if (ytReady || ytFailed) return; ytFailed = true; renderGenre();
+  showMsg("YouTube can't play inside this page here, so songs open on YouTube instead. The HTML file version plays them in the page.");
+}
+function playSong(g, i) {
+  const sg = S.songs[g][i]; if (!sg.id || !ytReady) { if (!ytReady && !ytFailed) showMsg("The YouTube player is still loading. Try again in a moment."); return; }
+  hideMsg();
+  const wasSong = songActive(); const b = beatNow();
+  cur = { g, i }; $("tv").hidden = false;
+  if (!wasSong) lastSynthBeat = b;
+  if (!player) {
+    const pv = { playsinline: 1, rel: 0 };
+    if (location.origin.startsWith("http")) pv.origin = location.origin;
+    player = new YT.Player("yt", { videoId: sg.id, playerVars: pv, events: {
+      onReady: e => e.target.playVideo(), onStateChange: onYtState, onError: onYtError } });
+  } else player.loadVideoById(sg.id);
+  renderGenre(); renderTempo();
+}
+function stopSong() {
+  if (player) player.stopVideo();
+  const b = beatNow(); cur = null; ytState = -1; $("tv").hidden = true;
+  if (!paused) reanchor(b); audio.updateDrone(); renderGenre(); renderTempo(); renderPause();
+}
+function onYtState(e) {
+  const prevActive = songActive();
+  const lastB = prevActive ? beatNow() : 0;
+  ytState = e.data;
+  const sg = curSong();
+  if (ytState === 1 && sg && sg.mine && sg.t === "Your song") { const t = player.getVideoData()?.title; if (t) { sg.t = t; save(); } }
+  if (prevActive && !songActive()) { paused = false; reanchor(lastB); }
+  vtRaw = -1; audio.updateDrone(); renderGenre(); renderTempo(); renderPause();
+}
+function onYtError(e) {
+  showMsg(e.data === 101 || e.data === 150 || e.data === 153
+    ? "This video's owner doesn't allow it to play on other sites. Use ✎ to paste a different upload of the song (lyric or audio versions often work)."
+    : "YouTube couldn't play that video. Check the link, or try a different upload.");
+}
+const songActive = () => !!(player && cur && (ytState === 1 || ytState === 2 || ytState === 3));
+const songBpm = () => { const sg = curSong(); return sg && sg.bpm ? sg.bpm : GENRES[cur ? cur.g : S.genre].bpm; };
+let vtBase = 0, vtPerf = 0, vtRaw = -1, lastSynthBeat = 0;
+function songTime() {
+  const now = performance.now() / 1000, raw = player.getCurrentTime ? player.getCurrentTime() : 0;
+  const moving = ytState === 1;
+  if (raw !== vtRaw) {
+    const est = vtBase + (moving ? now - vtPerf : 0);
+    if (vtRaw < 0 || !moving || Math.abs(est - raw) > 0.15) vtBase = raw; else vtBase = est + (raw - est) * 0.15;
+    vtPerf = now; vtRaw = raw;
+  }
+  return vtBase + (moving ? now - vtPerf : 0);
+}
+let syncTaps = [];
+function syncTap() {
+  const sg = curSong(); const vt = songTime();
+  if (syncTaps.length && vt - syncTaps[syncTaps.length - 1] > 2.2) syncTaps = [];
+  syncTaps.push(vt); if (syncTaps.length > 16) syncTaps.shift();
+  const n = syncTaps.length;
+  if (n >= 4) {
+    let sx = 0, sy = 0, sxx = 0, sxy = 0;
+    syncTaps.forEach((y, i) => { sx += i; sy += y; sxx += i * i; sxy += i * y; });
+    const period = (n * sxy - sx * sy) / (n * sxx - sx * sx), off = (sy - period * sx) / n;
+    if (period > 0.25 && period < 1.25) { sg.bpm = Math.round(6000 / period) / 100; sg.off = off; save(); renderGenre(); renderTempo(); }
+  } else { $("pbSync").textContent = `Keep tapping… ${n}`; }
+}
+$("genre").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.genre = b.dataset.g; editIdx = -1; if (!songActive()) setBpm(GENRES[S.genre].bpm); save(); renderGenre(); audio.updateDrone();
+};
+const tempoNow = () => songActive() ? songBpm() : S.bpm;
+function renderTempo() {
+  const v = Math.round(tempoNow());
+  $("bpm").value = v; $("bpmOut").textContent = `${v} bpm`; $("pbBpm").textContent = `${v} bpm`;
+  $("dholOn").checked = S.dhol; $("pbDhol").setAttribute("aria-pressed", String(S.dhol && !songActive()));
+  $("pbDhol").hidden = songActive();
+  const sg = curSong();
+  $("pbSync").textContent = songActive() ? (sg.off != null ? `Synced to song` : "Tap beat to sync") : "";
+  $("pbSync").classList.toggle("ok", !!(sg && sg.off != null));
+}
+$("bpm").oninput = e => setBpm(+e.target.value);
+$("dholOn").onchange = e => { S.dhol = e.target.checked; save(); renderTempo(); audio.updateDrone(); };
+$("pbDhol").onclick = () => { S.dhol = !S.dhol; save(); renderTempo(); audio.updateDrone(); };
+$("pbSlower").onclick = () => setBpm(tempoNow() - (songActive() ? 1 : 4));
+$("pbFaster").onclick = () => setBpm(tempoNow() + (songActive() ? 1 : 4));
+let taps = [];
+function tap() {
+  if (songActive()) { if (ytState === 1) syncTap(); else showMsg("Play the song first, then tap along on every beat."); return; }
+  const t = performance.now();
+  if (taps.length && t - taps[taps.length - 1] > 2000) taps = [];
+  taps.push(t); if (taps.length > 6) taps.shift();
+  if (taps.length >= 3) {
+    const gaps = []; for (let i = 1; i < taps.length; i++) gaps.push(taps[i] - taps[i - 1]);
+    setBpm(Math.round(60000 / (gaps.reduce((a, b) => a + b) / gaps.length)));
+  }
+}
+$("tap").onclick = tap; $("pbTap").onclick = tap;
+
+const RING_LABELS = ["Inner", "Second", "Third", "Fourth", "Outer"];
+function renderRings() {
+  $("ringCount").textContent = S.rings.length;
+  $("ringMinus").disabled = S.rings.length <= 1; $("ringPlus").disabled = S.rings.length >= 5;
+  const box = $("rings"); box.innerHTML = "";
+  S.rings.forEach((r, i) => {
+    const label = S.rings.length === 1 ? "Circle" : (i === S.rings.length - 1 && i > 0 ? "Outer circle" : `${RING_LABELS[i]} circle`);
+    const card = el("div", { class: "ring" });
+    const colour = r.color === "day" ? DAYS[S.day].outfits[0] : DAYS[r.color].wear;
+    card.innerHTML = `
+      <div class="ring-h"><span class="dot" style="background:${colour}"></span>${label}
+        <button class="dir-btn" aria-label="Direction">${r.dir > 0
+          ? '<svg viewBox="0 0 16 16"><path d="M3 8a5 5 0 109-3" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M12.5 1.5v4h-4" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>Anticlockwise'
+          : '<svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 11-9-3" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M3.5 1.5v4h4" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>Clockwise'}</button>
+      </div>
+      <div class="seg small">
+        <button data-v="f" aria-pressed="${r.g === "f"}">Women</button>
+        <button data-v="m" aria-pressed="${r.g === "m"}">Men</button>
+        <button data-v="alt" aria-pressed="${r.g === "alt"}">Alternate</button>
+      </div>`;
+    const sel = el("select", { id: `ringColor${i}`, "aria-label": `${label} outfit colours` });
+    sel.appendChild(new Option(`Outfits: Night ${DAYS[S.day].n} palette`, "day"));
+    DAYS.forEach((d, k) => sel.appendChild(new Option(`Outfits: ${d.name} (Night ${d.n})`, k)));
+    sel.value = String(r.color);
+    sel.onchange = () => { r.color = sel.value === "day" ? "day" : +sel.value; save(); renderRings(); };
+    card.appendChild(sel);
+    card.querySelector(".dir-btn").onclick = () => { r.dir *= -1; save(); renderRings(); };
+    card.querySelectorAll(".seg button").forEach(b => b.onclick = () => { r.g = b.dataset.v; save(); renderRings(); });
+    box.appendChild(card);
+  });
+}
+$("ringMinus").onclick = () => { if (S.rings.length > 1) { S.rings.pop(); save(); renderRings(); } };
+$("ringPlus").onclick = () => {
+  if (S.rings.length < 5) { const last = S.rings[S.rings.length - 1]; S.rings.push({ g: "alt", dir: -last.dir, color: "day" }); save(); renderRings(); }
+};
+
+function renderCentres() {
+  const box = $("centres"); box.innerHTML = "";
+  for (const k in CENTRES) {
+    const b = el("button", { class: "centre", "aria-pressed": String(S.centre === k) }, `<span class="gu">${CENTRES[k].gu}</span><span class="en">${CENTRES[k].en}</span>`);
+    b.onclick = () => { S.centre = k; save(); renderCentres(); };
+    box.appendChild(b);
+  }
+}
+
+function renderLib() {
+  const box = $("lib"); box.innerHTML = "";
+  for (const k in STEPS) {
+    const b = el("button", { title: `Add ${STEPS[k].en}` }, `+ <span class="gu">${STEPS[k].gu}</span>${STEPS[k].en.split(" · ")[0]}`);
+    b.onclick = () => { S.seq.push({ s: k, b: STEPS[k].unit * 2 }); save(); renderSeq(); };
+    box.appendChild(b);
+  }
+}
+let seqNowIdx = -1;
+function renderSeq() {
+  const ol = $("seq"); ol.innerHTML = "";
+  if (!S.seq.length) { ol.appendChild(el("li", { class: "empty" }, "No steps yet. Add one above.")); renderProgress(); return; }
+  S.seq.forEach((it, i) => {
+    const st = STEPS[it.s];
+    const li = el("li");
+    li.innerHTML = `<span class="n">${i + 1}</span>
+      <span class="nm"><span class="gu">${st.gu}</span><br><span class="en">${st.en}</span></span>
+      <span class="beats"><button data-a="less" aria-label="Fewer beats">−</button><span>${it.b} beats</span><button data-a="more" aria-label="More beats">+</button></span>
+      <span class="ops"><button data-a="up" aria-label="Move up" ${i === 0 ? "disabled" : ""}>↑</button><button data-a="down" aria-label="Move down" ${i === S.seq.length - 1 ? "disabled" : ""}>↓</button><button data-a="del" aria-label="Remove">×</button></span>`;
+    li.onclick = e => {
+      const a = e.target.closest("button")?.dataset.a; if (!a) return;
+      if (a === "less") it.b = Math.max(st.unit, it.b - st.unit);
+      if (a === "more") it.b = Math.min(64, it.b + st.unit);
+      if (a === "up" && i > 0) [S.seq[i - 1], S.seq[i]] = [S.seq[i], S.seq[i - 1]];
+      if (a === "down" && i < S.seq.length - 1) [S.seq[i + 1], S.seq[i]] = [S.seq[i], S.seq[i + 1]];
+      if (a === "del") S.seq.splice(i, 1);
+      save(); renderSeq();
+    };
+    ol.appendChild(li);
+  });
+  seqNowIdx = -1;
+  renderProgress();
+}
+
+// ---------- Clock ----------
+let audioCtx = null;
+const clockNow = () => audioCtx ? audioCtx.currentTime : performance.now() / 1000;
+let anchorT = clockNow(), anchorB = 0, paused = false, pausedB = 0;
+function beatNow() {
+  if (songActive()) { const sg = curSong(); return (songTime() - (sg.off || 0)) * songBpm() / 60; }
+  return paused ? pausedB : anchorB + (clockNow() - anchorT) * S.bpm / 60;
+}
+function timeOfBeat(b) { return anchorT + (b - anchorB) * 60 / S.bpm; }
+function reanchor(b) { anchorB = b; anchorT = clockNow(); }
+function setBpm(v) {
+  if (songActive()) {
+    const sg = curSong(), b = beatNow(), nb = Math.max(50, Math.min(220, v));
+    sg.bpm = nb; sg.off = songTime() - b * 60 / nb; save(); renderTempo(); renderGenre(); return;
+  }
+  const b = beatNow(); S.bpm = Math.max(60, Math.min(200, Math.round(v))); if (!paused) reanchor(b);
+  audio.rebase(); save(); renderTempo();
+}
+
+function seqAt(beat) {
+  const total = S.seq.reduce((a, x) => a + x.b, 0);
+  if (!total) return null;
+  let p = ((beat % total) + total) % total;
+  for (let i = 0; i < S.seq.length; i++) {
+    if (p < S.seq[i].b) return { i, s: S.seq[i].s, lb: p, len: S.seq[i].b, prev: S.seq[(i - 1 + S.seq.length) % S.seq.length].s };
+    p -= S.seq[i].b;
+  }
+  return null;
+}
+
+// ---------- Audio ----------
+const PATTERNS = {
+  // per tick hits: D dagga (low), t tilli (high), c clap, k dandiya clack, m manjira
+  be:      { sub:2, ticks:["D","","t","D","c","t","Dc","t"] },
+  tran:    { sub:2, ticks:["D","","t","D","c","c","Dc","t"] },
+  dodhiyu: { sub:2, ticks:["Dc","t","D","t","D","t","Dc","t"] },
+  hinch:   { sub:3, ticks:["Dc","","t","D","t",""] },
+  spin:    { sub:2, ticks:["D","","t","","D","t","t",""] },
+  dandiya: { sub:2, ticks:["D","k","t","Dk","D","k","t","Dk"] },
+};
+const audio = (() => {
+  let master, noiseBuf, droneNodes = null, timer = null, nextBeat = 0;
+  function init() {
+    if (audioCtx) return;
+    const b = beatNow();
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    reanchor(b);
+    const comp = audioCtx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+    master = audioCtx.createGain(); master.gain.value = 0.8; master.connect(comp); comp.connect(audioCtx.destination);
+    noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.5, audioCtx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const env = (g, t, peak, dur) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); };
+  function osc(type, f0, f1, t, peak, dur) {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = type;
+    o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.6);
+    env(g, t, peak, dur); o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function noise(type, freq, q, t, peak, dur) {
+    const s = audioCtx.createBufferSource(); s.buffer = noiseBuf;
+    const f = audioCtx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+    const g = audioCtx.createGain(); env(g, t, peak, dur);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + dur + 0.05);
+  }
+  const hit = {
+    D: t => { osc("sine", 120, 52, t, 0.95, 0.38); noise("lowpass", 400, 1, t, 0.25, 0.05); },
+    t: t => { noise("bandpass", 1300, 1.6, t, 0.45, 0.09); osc("triangle", 360, 300, t, 0.18, 0.08); },
+    c: t => { [0, 0.011, 0.023].forEach((o, i) => noise("bandpass", 1500, 1.1, t + o, i === 2 ? 0.55 : 0.3, i === 2 ? 0.14 : 0.03)); },
+    k: t => { noise("highpass", 2600, 0.8, t, 0.4, 0.045); osc("square", 1900, 1700, t, 0.07, 0.035); },
+    m: t => { osc("sine", 5200, 0, t, 0.05, 0.28); osc("sine", 6900, 0, t, 0.035, 0.22); },
+    sh: t => noise("highpass", 6500, 0.7, t, 0.08, 0.05),
+    bass: t => osc("sine", 82, 55, t, 0.35, 0.4),
+  };
+  function scheduleTick(b, t) {
+    const at = seqAt(b); if (!at) return;
+    const p = PATTERNS[at.s], idx = Math.round((at.lb * p.sub)) % p.ticks.length;
+    for (const ch of p.ticks[idx]) hit[ch] && hit[ch](t);
+    const onBeat = Math.abs(at.lb - Math.round(at.lb)) < 1e-6;
+    if (S.genre === "filmi") {
+      hit.sh(t);
+      if (onBeat && Math.round(at.lb) % 2 === 0) hit.bass(t);
+    } else if (!onBeat) hit.m(t);
+  }
+  function loop() {
+    if (!audioCtx || paused || !S.dhol || !playing || songActive()) return;
+    const horizon = audioCtx.currentTime + 0.12;
+    while (timeOfBeat(nextBeat) < horizon) {
+      const t = timeOfBeat(nextBeat);
+      if (t >= audioCtx.currentTime - 0.02) scheduleTick(nextBeat, Math.max(t, audioCtx.currentTime));
+      const at = seqAt(nextBeat); const sub = at ? PATTERNS[at.s].sub : 2;
+      nextBeat = Math.round((nextBeat + 1 / sub) * 6000) / 6000;
+    }
+  }
+  function rebase() {
+    // align the next tick to the grid of the current step after a jump or tempo change
+    const b = beatNow(); const at = seqAt(b); const sub = at ? PATTERNS[at.s].sub : 2;
+    nextBeat = Math.ceil(b * sub - 1e-6) / sub;
+  }
+  function startDrone() {
+    if (droneNodes || !audioCtx) return;
+    const f = audioCtx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 700;
+    const g = audioCtx.createGain(); g.gain.value = 0.0001; g.gain.exponentialRampToValueAtTime(0.05, audioCtx.currentTime + 1.2);
+    const os = [130.8, 196, 261.6].map(fr => { const o = audioCtx.createOscillator(); o.type = "triangle"; o.frequency.value = fr; o.connect(f); o.start(); return o; });
+    f.connect(g); g.connect(master); droneNodes = { os, g };
+  }
+  function stopDrone() {
+    if (!droneNodes) return; const { os, g } = droneNodes; droneNodes = null;
+    g.gain.cancelScheduledValues(audioCtx.currentTime); g.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.15);
+    os.forEach(o => o.stop(audioCtx.currentTime + 0.8));
+  }
+  function updateDrone() {
+    const on = audioCtx && playing && !paused && S.dhol && !songActive();
+    if (on && S.genre === "traditional") startDrone(); else stopDrone();
+    if (on) rebase();
+  }
+  function start() {
+    init(); audioCtx.resume();
+    rebase();
+    if (!timer) timer = setInterval(loop, 25);
+    updateDrone();
+  }
+  function stop() { stopDrone(); }
+  return { start, stop, rebase, updateDrone };
+})();
+
+// ---------- Play mode ----------
+let playing = false;
+function enterPlay() {
+  playing = true; paused = false;
+  document.body.classList.add("playing"); $("playbar").hidden = false;
+  if (cur && player && !ytFailed) { audio.start(); player.playVideo(); }
+  else { audio.start(); reanchor(0); audio.rebase(); audio.updateDrone(); }
+  renderPause(); renderTempo(); renderProgress(); resize();
+}
+function exitPlay() {
+  playing = false; audio.stop();
+  if (paused) { paused = false; reanchor(pausedB); }
+  document.body.classList.remove("playing"); $("playbar").hidden = true; resize();
+}
+function togglePause() {
+  if (songActive()) { ytState === 1 ? player.pauseVideo() : player.playVideo(); return; }
+  if (paused) { paused = false; reanchor(pausedB); audio.rebase(); }
+  else { pausedB = beatNow(); paused = true; }
+  audio.updateDrone(); renderPause();
+}
+function renderPause() {
+  const isPaused = songActive() ? ytState !== 1 : paused;
+  $("pbPause").innerHTML = isPaused
+    ? '<svg viewBox="0 0 16 16"><path d="M4 2l10 6-10 6z" fill="currentColor"/></svg>'
+    : '<svg viewBox="0 0 16 16"><path d="M4 2h3v12H4zM9 2h3v12H9z" fill="currentColor"/></svg>';
+  $("pbPause").setAttribute("aria-label", isPaused ? "Resume" : "Pause");
+}
+$("playBtn").onclick = enterPlay;
+$("pbExit").onclick = exitPlay;
+$("pbPause").onclick = togglePause;
+document.addEventListener("keydown", e => {
+  if (!playing) return;
+  if (e.key === "Escape") exitPlay();
+  if (e.key === " " && e.target === document.body) { e.preventDefault(); togglePause(); }
+});
+
+function renderProgress() {
+  const box = $("progress"); box.innerHTML = "";
+  const total = S.seq.reduce((a, x) => a + x.b, 0) || 1;
+  S.seq.forEach(x => { const i = el("i"); i.style.flex = `${x.b / total}`; i.appendChild(el("b")); box.appendChild(i); });
+}
+
+// ---------- Canvas ----------
+const cv = $("cv"), ctx = cv.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  const r = $("stage").getBoundingClientRect();
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = r.width; H = r.height; cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  buildPatterns();
+}
+new ResizeObserver(resize).observe($("stage"));
+
+let patterns = {}, patSize = 0;
+function bandhani(color) {
+  if (patterns[color]) return patterns[color];
+  const t = Math.max(6, Math.round(patSize * DPR)), c = document.createElement("canvas"); c.width = c.height = t;
+  const g = c.getContext("2d"); g.fillStyle = color; g.fillRect(0, 0, t, t);
+  const dot = lum(color) > 0.8 ? "#b3122e" : "#fff6e2";
+  const cluster = (cx, cy) => {
+    g.fillStyle = dot; const o = t * 0.085, r = t * 0.05;
+    [[o,0],[-o,0],[0,o],[0,-o]].forEach(([dx,dy]) => { g.beginPath(); g.arc(cx+dx, cy+dy, r, 0, TAU); g.fill(); });
+    g.fillStyle = shade(color, -0.35); g.beginPath(); g.arc(cx, cy, r * 0.7, 0, TAU); g.fill();
+  };
+  cluster(t * 0.25, t * 0.25); cluster(t * 0.75, t * 0.75);
+  const p = ctx.createPattern(c, "repeat"); p.setTransform(new DOMMatrix().scale(1 / DPR));
+  return (patterns[color] = p);
+}
+function buildPatterns() { patterns = {}; }
+
+function layout() {
+  const S0 = Math.min(W, H) / 2 * (playing ? 0.96 : 0.94);
+  const R0 = S0 * 0.24, outer = S0 * 0.9, k = S.rings.length;
+  const size = Math.min(S0 * 0.2, (outer - R0) / k * 1.05);
+  const radii = [];
+  if (k === 1) radii.push((R0 + outer) / 2);
+  else for (let i = 0; i < k; i++) radii.push(R0 + size * 0.55 + i * (outer - R0 - size * 1.1) / (k - 1));
+  return { S0, R0, outer, size, radii };
+}
+
+// Poses
+function pose(step, lb, j) {
+  const p = { arms: 0.2, flare: 1, selfRot: 0, radial: 0, tang: 0, sway: 0, squash: 1, flash: 0, stick: false };
+  const f = lb % 1;
+  if (step === "be") {
+    const c = lb % 4;
+    p.arms = 0.15 + 0.85 * Math.max(G(c, 2), G(c, 3)); p.flash = Math.max(G(c, 2, .05), G(c, 3, .05));
+    p.sway = 0.28 * Math.sin(c / 4 * TAU); p.radial = 0.03 * Math.sin(Math.PI * f);
+  } else if (step === "tran") {
+    const c = lb % 4;
+    p.arms = 0.15 + 0.85 * Math.max(G(c, 2, .09), G(c, 2.5, .09), G(c, 3, .09)); p.flash = Math.max(G(c, 2, .04), G(c, 2.5, .04), G(c, 3, .04));
+    p.radial = -0.14 * G(c, 0.5, .3) + 0.1 * G(c, 1.4, .3); p.sway = 0.22 * Math.sin(c / 4 * TAU);
+  } else if (step === "dodhiyu") {
+    const hop = Math.sin(Math.PI * f); const side = Math.floor(lb) % 2 ? 1 : -1;
+    p.radial = 0.09 * hop * side; p.arms = 0.5 + 0.5 * Math.cos(TAU * lb); p.flash = Math.max(G(f, 0, .05), G(f, 1, .05));
+    p.squash = 1 - 0.1 * (1 - hop); p.sway = 0.38 * side * hop; p.flare = 1.12;
+  } else if (step === "hinch") {
+    const c = lb % 2;
+    p.sway = 0.5 * Math.sin(Math.PI * c); p.tang = 0.08 * Math.sin(Math.PI * c); p.radial = 0.03 * Math.sin(TAU * c / 2);
+    p.arms = 0.3 + 0.6 * Math.max(G(c, 0, .14), G(c, 2, .14)); p.flash = Math.max(G(c, 0, .05), G(c, 2, .05)); p.flare = 1.08;
+  } else if (step === "spin") {
+    p.selfRot = (lb / 2) * TAU; p.flare = 1.55 + 0.1 * Math.sin(TAU * lb); p.arms = 0.02;
+  } else if (step === "dandiya") {
+    let s = j % 2 === 0 ? 1 : -1; if (Math.floor(lb / 4) % 2) s = -s;
+    p.sway = s * 0.95; p.tang = s * 0.13; p.arms = 0.25 + 0.65 * G(f, 0.5, .12); p.flash = G(f, 0.5, .05); p.stick = true;
+  }
+  return p;
+}
+function blendPose(a, b, t) {
+  const o = {}; for (const k in a) o[k] = typeof a[k] === "number" ? a[k] + (b[k] - a[k]) * t : (t > 0.5 ? b[k] : a[k]);
+  return o;
+}
+
+const SKIN = "#c98a5a", HAIR = "#24150f";
+function drawArms(s, p, colStick) {
+  const a = Math.max(0, Math.min(1, p.arms));
+  for (const side of [-1, 1]) {
+    const sx = side * 0.075 * s, sy = -0.22 * s;
+    const hx = side * (0.3 + (0.035 - 0.3) * a) * s, hy = (-0.4 + (-0.58 + 0.4) * a) * s;
+    const ex = side * (0.25 + (0.14 - 0.25) * a) * s, ey = (-0.18 + (-0.36 + 0.18) * a) * s;
+    ctx.strokeStyle = SKIN; ctx.lineWidth = 0.045 * s; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(ex, ey, hx, hy); ctx.stroke();
+    if (p.stick) {
+      const dx = hx - ex, dy = hy - ey, L = Math.hypot(dx, dy) || 1;
+      ctx.strokeStyle = "#c48a3c"; ctx.lineWidth = 0.032 * s;
+      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + dx / L * 0.24 * s, hy + dy / L * 0.24 * s); ctx.stroke();
+      ctx.strokeStyle = colStick; ctx.lineWidth = 0.034 * s;
+      ctx.beginPath(); ctx.moveTo(hx + dx / L * 0.17 * s, hy + dy / L * 0.17 * s); ctx.lineTo(hx + dx / L * 0.22 * s, hy + dy / L * 0.22 * s); ctx.stroke();
+    }
+    ctx.fillStyle = SKIN; ctx.beginPath(); ctx.arc(hx, hy, 0.028 * s, 0, TAU); ctx.fill();
+  }
+  if (p.flash > 0.3) {
+    ctx.strokeStyle = `rgba(255,236,170,${Math.min(1, p.flash)})`; ctx.lineWidth = 0.022 * s;
+    const cy = (p.stick ? -0.72 : -0.64) * s;
+    for (let i = 0; i < 6; i++) { const an = i / 6 * TAU; ctx.beginPath(); ctx.moveTo(Math.cos(an) * 0.05 * s, cy + Math.sin(an) * 0.05 * s); ctx.lineTo(Math.cos(an) * (0.05 + 0.08 * p.flash) * s, cy + Math.sin(an) * (0.05 + 0.08 * p.flash) * s); ctx.stroke(); }
+  }
+}
+function hemDots(s, w, y, n) {
+  ctx.fillStyle = "#fff6e2";
+  for (let i = 0; i < n; i++) { const u = i / (n - 1), x = (-w + 2 * w * u) * s, yy = (y + 0.08 * (1 - (2 * u - 1) ** 2)) * s; ctx.beginPath(); ctx.arc(x, yy, 0.02 * s, 0, TAU); ctx.fill(); }
+}
+function drawWoman(s, p, c1, c2) {
+  const fl = p.flare, hw = 0.22 * fl, hy = 0.37;
+  ctx.beginPath(); ctx.moveTo(-0.075 * s, -0.08 * s); ctx.lineTo(0.075 * s, -0.08 * s); ctx.lineTo(hw * s, hy * s);
+  ctx.quadraticCurveTo(0, (hy + 0.16) * s, -hw * s, hy * s); ctx.closePath();
+  ctx.fillStyle = bandhani(c1); ctx.fill();
+  ctx.strokeStyle = shade(c1, -0.38); ctx.lineWidth = 0.055 * s;
+  ctx.beginPath(); ctx.moveTo(hw * s, hy * s); ctx.quadraticCurveTo(0, (hy + 0.16) * s, -hw * s, hy * s); ctx.stroke();
+  hemDots(s, hw * 0.92, hy + 0.005, 7);
+  ctx.fillStyle = c2; ctx.beginPath(); ctx.roundRect(-0.075 * s, -0.25 * s, 0.15 * s, 0.18 * s, 0.03 * s); ctx.fill();
+  ctx.fillStyle = shade(c2, -0.3); ctx.fillRect(-0.075 * s, -0.1 * s, 0.15 * s, 0.025 * s);
+  drawArms(s, p, c2);
+  ctx.fillStyle = HAIR; ctx.beginPath(); ctx.arc(0, -0.44 * s, 0.05 * s, 0, TAU); ctx.fill();
+  ctx.fillStyle = SKIN; ctx.beginPath(); ctx.arc(0, -0.335 * s, 0.083 * s, 0, TAU); ctx.fill();
+  ctx.fillStyle = HAIR; ctx.beginPath(); ctx.arc(0, -0.335 * s, 0.085 * s, Math.PI * 1.05, Math.PI * 1.95); ctx.fill();
+  ctx.fillStyle = "#f2c94c"; ctx.beginPath(); ctx.arc(0, -0.385 * s, 0.018 * s, 0, TAU); ctx.fill();
+}
+function drawMan(s, p, c1, c2) {
+  const fl = 0.85 + (p.flare - 1) * 0.8 + 0.15;
+  ctx.fillStyle = "#efe4cc";
+  for (const side of [-1, 1]) { ctx.beginPath(); ctx.roundRect((side < 0 ? -0.095 : 0.03) * s, 0.06 * s, 0.065 * s, 0.29 * s, 0.025 * s); ctx.fill(); }
+  ctx.fillStyle = "#3a2316";
+  for (const side of [-1, 1]) { ctx.beginPath(); ctx.ellipse(side * 0.062 * s, 0.37 * s, 0.04 * s, 0.028 * s, 0, 0, TAU); ctx.fill(); }
+  const hw = 0.2 * fl;
+  ctx.beginPath(); ctx.moveTo(-0.085 * s, -0.25 * s); ctx.lineTo(0.085 * s, -0.25 * s); ctx.lineTo(0.08 * s, -0.06 * s);
+  ctx.lineTo(hw * s, 0.13 * s); ctx.quadraticCurveTo(0, 0.22 * s, -hw * s, 0.13 * s); ctx.lineTo(-0.08 * s, -0.06 * s); ctx.closePath();
+  ctx.fillStyle = bandhani(c1); ctx.fill();
+  ctx.strokeStyle = shade(c1, -0.38); ctx.lineWidth = 0.04 * s;
+  ctx.beginPath(); ctx.moveTo(hw * s, 0.13 * s); ctx.quadraticCurveTo(0, 0.22 * s, -hw * s, 0.13 * s); ctx.stroke();
+  ctx.strokeStyle = c2; ctx.lineWidth = 0.03 * s; ctx.beginPath(); ctx.moveTo(-0.08 * s, -0.07 * s); ctx.lineTo(0.08 * s, -0.07 * s); ctx.stroke();
+  drawArms(s, p, c2);
+  ctx.fillStyle = SKIN; ctx.beginPath(); ctx.arc(0, -0.335 * s, 0.08 * s, 0, TAU); ctx.fill();
+  ctx.fillStyle = c2; ctx.beginPath(); ctx.ellipse(0, -0.37 * s, 0.1 * s, 0.065 * s, 0, Math.PI, TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, -0.43 * s, 0.035 * s, 0, TAU); ctx.fill();
+  ctx.fillStyle = "#fff6e2"; ctx.beginPath(); ctx.arc(0, -0.39 * s, 0.014 * s, 0, TAU); ctx.fill();
+}
+
+// Centrepieces
+function flame(x, y, s, t, glowCol = "rgba(255,190,80,.55)") {
+  const fl = 1 + 0.08 * Math.sin(t * 17) + 0.05 * Math.sin(t * 29);
+  ctx.save(); ctx.shadowColor = glowCol; ctx.shadowBlur = s * 1.2;
+  ctx.fillStyle = "#ffb627"; ctx.beginPath(); ctx.moveTo(x, y - s * fl); ctx.quadraticCurveTo(x + s * 0.5, y - s * 0.2, x, y + s * 0.25); ctx.quadraticCurveTo(x - s * 0.5, y - s * 0.2, x, y - s * fl); ctx.fill();
+  ctx.shadowBlur = 0; ctx.fillStyle = "#fff1b8"; ctx.beginPath(); ctx.ellipse(x, y - s * 0.05, s * 0.13, s * 0.25, 0, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+function drawCentre(L, t, beat, pal) {
+  const c = L.R0 * 0.62, k = S.centre;
+  const pulse = 0.5 + 0.5 * G(beat % 1, 0, .12);
+  if (k === "garbo") {
+    ctx.fillStyle = "#9c3f25"; ctx.beginPath(); ctx.ellipse(0, c * 0.1, c * 0.62, c * 0.6, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = "#7a2d18"; ctx.beginPath(); ctx.ellipse(0, -c * 0.42, c * 0.3, c * 0.09, 0, 0, TAU); ctx.fill();
+    ctx.save(); ctx.shadowColor = "rgba(255,200,90,.9)"; ctx.shadowBlur = c * 0.12 * (0.6 + pulse);
+    ctx.fillStyle = `rgba(255,${200 + 30 * pulse},120,1)`;
+    for (let row = 0; row < 4; row++) { const ry = -c * 0.18 + row * c * 0.18, rw = c * (0.5 - Math.abs(row - 1.3) * 0.07), n = 7;
+      for (let i = 0; i < n; i++) { ctx.beginPath(); ctx.arc(-rw + (2 * rw) * i / (n - 1), ry + c * 0.05 * Math.sin(i / (n - 1) * Math.PI), c * 0.04, 0, TAU); ctx.fill(); } }
+    ctx.restore();
+    ctx.fillStyle = "#c9762d"; ctx.beginPath(); ctx.ellipse(0, -c * 0.48, c * 0.17, c * 0.06, 0, 0, Math.PI); ctx.fill();
+    flame(0, -c * 0.5, c * 0.2, t);
+  } else if (k === "jyot") {
+    for (let i = 3; i >= 0; i--) { ctx.fillStyle = i % 2 ? "#b8862b" : "#e2b44a"; ctx.beginPath(); ctx.arc(0, 0, c * (0.25 + i * 0.12), 0, TAU); ctx.fill(); }
+    ctx.fillStyle = "#7a5414"; ctx.beginPath(); ctx.arc(0, 0, c * 0.2, 0, TAU); ctx.fill();
+    flame(0, c * 0.05, c * 0.38, t);
+  } else if (k === "mataji") {
+    ctx.fillStyle = "#c08a22"; ctx.beginPath(); ctx.moveTo(-c * 0.55, c * 0.55); ctx.lineTo(-c * 0.55, -c * 0.15); ctx.arc(0, -c * 0.15, c * 0.55, Math.PI, TAU); ctx.lineTo(c * 0.55, c * 0.55); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#b5122e"; ctx.beginPath(); ctx.moveTo(-c * 0.44, c * 0.48); ctx.lineTo(-c * 0.44, -c * 0.12); ctx.arc(0, -c * 0.12, c * 0.44, Math.PI, TAU); ctx.lineTo(c * 0.44, c * 0.48); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#f2c94c";
+    for (let i = 0; i < 18; i++) { const a = Math.PI + i / 17 * Math.PI; ctx.beginPath(); ctx.arc(Math.cos(a) * c * 0.5, -c * 0.15 + Math.sin(a) * c * 0.5, c * 0.025, 0, TAU); ctx.fill(); }
+    ctx.strokeStyle = "#f2c94c"; ctx.lineWidth = c * 0.045; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(0, c * 0.38); ctx.lineTo(0, -c * 0.4); ctx.moveTo(-c * 0.18, -c * 0.3); ctx.quadraticCurveTo(-c * 0.18, -c * 0.08, 0, -c * 0.08); ctx.quadraticCurveTo(c * 0.18, -c * 0.08, c * 0.18, -c * 0.3); ctx.stroke();
+    ctx.fillStyle = "#f2c94c"; ctx.beginPath(); ctx.moveTo(0, -c * 0.52); ctx.lineTo(-c * 0.05, -c * 0.38); ctx.lineTo(c * 0.05, -c * 0.38); ctx.fill();
+    ctx.fillStyle = "#f28b1a";
+    for (let i = 0; i < 9; i++) { const a = Math.PI * 0.15 + i / 8 * Math.PI * 0.7; ctx.beginPath(); ctx.arc(Math.cos(a) * c * 0.75, c * 0.15 + Math.sin(a) * c * 0.55, c * 0.06, 0, TAU); ctx.fill(); }
+    flame(0, c * 0.66, c * 0.12, t);
+  } else if (k === "mandvi") {
+    ctx.save(); ctx.rotate(t * 0.05);
+    ctx.fillStyle = "#6b3a1c"; ctx.beginPath(); ctx.roundRect(-c * 0.62, -c * 0.62, c * 1.24, c * 1.24, c * 0.1); ctx.fill();
+    ctx.fillStyle = "#b5122e"; ctx.beginPath(); ctx.roundRect(-c * 0.5, -c * 0.5, c, c, c * 0.06); ctx.fill();
+    ctx.fillStyle = "#f2c94c";
+    for (let i = 0; i < 16; i++) { const u = i / 16; for (const [x, y] of [[-0.56 + 1.12 * u, -0.56], [0.56, -0.56 + 1.12 * u], [0.56 - 1.12 * u, 0.56], [-0.56, 0.56 - 1.12 * u]]) { ctx.beginPath(); ctx.arc(x * c, y * c, c * 0.025, 0, TAU); ctx.fill(); } }
+    ctx.fillStyle = "#e2b44a"; for (const [x, y] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { ctx.beginPath(); ctx.arc(x * c * 0.5, y * c * 0.5, c * 0.09, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = "#e2b44a"; ctx.beginPath(); ctx.arc(0, 0, c * 0.26, 0, TAU); ctx.fill();
+    ctx.restore();
+    flame(0, c * 0.02, c * 0.16, t);
+  } else if (k === "pillar") {
+    const n = 16;
+    ctx.strokeStyle = "rgba(255,240,200,.35)"; ctx.lineWidth = 1;
+    for (let i = 0; i < n; i++) {
+      const a = i / n * TAU; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * L.outer * 1.05, Math.sin(a) * L.outer * 1.05); ctx.stroke();
+      for (let d = c * 0.6; d < L.outer; d += c * 0.32) {
+        const on = (Math.floor(d / (c * 0.32)) + Math.floor(beat)) % 3 === 0;
+        ctx.fillStyle = on ? "#ffd86b" : "#f28b1a"; ctx.beginPath(); ctx.arc(Math.cos(a) * d, Math.sin(a) * d, c * (on ? 0.045 : 0.035), 0, TAU); ctx.fill();
+      }
+    }
+    ctx.fillStyle = "#e2b44a"; ctx.beginPath(); ctx.arc(0, 0, c * 0.32, 0, TAU); ctx.fill();
+    ctx.fillStyle = "#b5122e"; ctx.beginPath(); ctx.arc(0, 0, c * 0.22, 0, TAU); ctx.fill();
+    ctx.fillStyle = "#e2b44a"; ctx.beginPath(); ctx.arc(0, 0, c * 0.1, 0, TAU); ctx.fill();
+  } else if (k === "dhol") {
+    ctx.fillStyle = "#5a0f1a"; ctx.beginPath(); ctx.arc(0, 0, c * 0.78, 0, TAU); ctx.fill();
+    ctx.strokeStyle = "#e2b44a"; ctx.lineWidth = c * 0.03; ctx.setLineDash([c * 0.06, c * 0.05]); ctx.beginPath(); ctx.arc(0, 0, c * 0.7, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    for (const side of [-1, 1]) {
+      ctx.save(); ctx.translate(side * c * 0.32, 0); ctx.rotate(side * 0.25);
+      ctx.fillStyle = "#8a4b22"; ctx.beginPath(); ctx.roundRect(-c * 0.2, -c * 0.32, c * 0.4, c * 0.64, c * 0.08); ctx.fill();
+      ctx.strokeStyle = "#f2ead2"; ctx.lineWidth = c * 0.015;
+      for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(-c * 0.2, -c * 0.32 + i * c * 0.16); ctx.lineTo(c * 0.2, -c * 0.24 + i * c * 0.16); ctx.stroke(); }
+      ctx.fillStyle = "#e9dcc0"; ctx.beginPath(); ctx.ellipse(0, -c * 0.32, c * 0.2, c * 0.06, 0, 0, TAU); ctx.fill();
+      const hitA = side < 0 ? G(beat % 1, 0, .08) : G((beat + 0.5) % 1, 0, .08);
+      ctx.strokeStyle = "#c48a3c"; ctx.lineWidth = c * 0.03; ctx.beginPath(); ctx.moveTo(c * 0.05, -c * 0.32 - c * 0.04); ctx.lineTo(c * 0.35, -c * 0.6 + hitA * c * 0.22); ctx.stroke();
+      ctx.restore();
+    }
+  } else if (k === "rangoli") {
+    ctx.save(); ctx.rotate(t * 0.08);
+    const cols = [pal.outfits[0], pal.outfits[1], pal.outfits[2], "#fff6e2"];
+    for (let layer = 3; layer >= 0; layer--) {
+      const n = 8 + layer * 4, r = c * (0.25 + layer * 0.17);
+      ctx.fillStyle = cols[layer % 4];
+      for (let i = 0; i < n; i++) { const a = i / n * TAU + layer * 0.2; ctx.save(); ctx.rotate(a); ctx.beginPath(); ctx.ellipse(r * 0.75, 0, r * 0.3, r * (0.55 / (layer + 2)) + c * 0.03, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+    }
+    ctx.fillStyle = "#fff6e2"; ctx.beginPath(); ctx.arc(0, 0, c * 0.18, 0, TAU); ctx.fill();
+    ctx.restore();
+    flame(0, c * 0.03, c * 0.12, t);
+  }
+}
+
+// Ring motion state
+let ringAngle = [0, 0, 0, 0, 0], ringSpeed = [0, 0, 0, 0, 0], lastT = clockNow();
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function draw() {
+  const t = clockNow(), dt = Math.min(0.1, Math.max(0, t - lastT)); lastT = t;
+  const sm = songActive();
+  const frozen = sm ? ytState !== 1 : (paused || (reduce && !playing));
+  const beat = sm ? beatNow() : frozen ? (paused ? pausedB : 0) : beatNow();
+  const tempo = tempoNow();
+  const pal = DAYS[S.day];
+  const L = layout();
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = pal.bg; ctx.fillRect(0, 0, W, H);
+  const cx = W / 2, cy = playing ? H / 2 - Math.min(40, H * 0.04) : H / 2;
+  const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, L.S0 * 1.05);
+  grd.addColorStop(0, pal.bg2); grd.addColorStop(1, pal.bg);
+  ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, L.S0 * 1.05, 0, TAU); ctx.fill();
+  ctx.translate(cx, cy);
+
+  const at = seqAt(beat);
+  const stepNow = at ? at.s : null;
+
+  // ground lines and lights
+  const [ir, ig, ib] = hexToRgb(pal.ink);
+  ctx.strokeStyle = `rgba(${ir},${ig},${ib},.10)`; ctx.lineWidth = 1;
+  L.radii.forEach(r => { ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke(); });
+  const edge = L.S0 * 1.0, ln = 48;
+  for (let i = 0; i < ln; i++) {
+    const on = (i + Math.floor(beat * 2)) % 4 === 0, a = i / ln * TAU;
+    ctx.fillStyle = on ? "#ffe9a8" : `rgba(${ir},${ig},${ib},.35)`;
+    ctx.beginPath(); ctx.arc(Math.cos(a) * edge, Math.sin(a) * edge, L.S0 * (on ? 0.012 : 0.008), 0, TAU); ctx.fill();
+  }
+  const tw = G(beat % 1, 0, .1);
+  for (const [rr, n, off] of [[L.R0 * 0.82, 14, 0], [L.R0 * 1.02, 18, 0.5]]) {
+    for (let i = 0; i < n; i++) {
+      const a = (i + off) / n * TAU + (off ? -1 : 1) * beat * 0.05;
+      ctx.fillStyle = `rgba(255,246,220,${0.45 + 0.5 * (i % 2 ? tw : 1 - tw)})`;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr, L.R0 * 0.035, 0, TAU); ctx.fill();
+    }
+  }
+
+  drawCentre(L, t, beat, pal);
+
+  // dancers
+  patSize = L.size * 0.15;
+  const travel = stepNow ? STEPS[stepNow].travel : 0;
+  S.rings.forEach((ring, ri) => {
+    const r = L.radii[ri]; const s = L.size;
+    let n = Math.max(6, Math.floor(TAU * r / (s * 0.66))); if (n % 2) n--;
+    const target = frozen ? 0 : ring.dir * -1 * travel * (tempo / 60) * (s * 0.32) / r;
+    ringSpeed[ri] += (target - ringSpeed[ri]) * Math.min(1, dt * 4);
+    ringAngle[ri] += ringSpeed[ri] * dt;
+    let bl = 1, prevStep = at ? at.prev : null;
+    if (at && at.lb < 0.35 && S.seq.length > 1) bl = at.lb / 0.35;
+    for (let j = 0; j < n; j++) {
+      let p = stepNow ? pose(stepNow, at.lb, j) : pose("none", 0, j);
+      if (bl < 1 && prevStep) { const pp = pose(prevStep, S.seq[(at.i - 1 + S.seq.length) % S.seq.length].b, j); p = blendPose(pp, p, bl); }
+      const th = ringAngle[ri] + j / n * TAU + p.tang * s / r;
+      const rad = r + p.radial * s;
+      const x = Math.cos(th) * rad, y = Math.sin(th) * rad;
+      let c1, c2;
+      if (ring.color === "day") { c1 = pal.outfits[(j + ri) % 3]; c2 = pal.outfits[(j + ri + 1) % 3]; }
+      else { c1 = DAYS[ring.color].wear; c2 = lum(c1) > 0.72 ? "#b3122e" : (lum(c1) > 0.55 ? "#7d1027" : "#e8b92d"); }
+      const gender = ring.g === "alt" ? (j % 2 ? "m" : "f") : ring.g;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(th + Math.PI / 2 + p.sway + p.selfRot);
+      if (p.squash !== 1) ctx.scale(1, p.squash);
+      if (gender === "f") drawWoman(s, p, c1, c2); else drawMan(s, p, c1, c2);
+      ctx.restore();
+    }
+  });
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  // labels
+  if (at) {
+    const st = STEPS[at.s];
+    const html = `<span class="gu">${st.gu}</span><br><span class="en">${st.en}</span>`;
+    if (playing) {
+      if ($("pbStep").dataset.k !== at.s) { $("pbStep").innerHTML = html; $("pbStep").dataset.k = at.s; }
+      const bars = $("progress").children;
+      for (let i = 0; i < bars.length; i++) { const b = bars[i].firstChild; b.style.width = i < at.i ? "100%" : i === at.i ? `${(at.lb / at.len) * 100}%` : "0"; }
+    } else if ($("nowStep").dataset.k !== at.s) { $("nowStep").innerHTML = html; $("nowStep").dataset.k = at.s; }
+    if (seqNowIdx !== at.i) {
+      seqNowIdx = at.i;
+      [...$("seq").children].forEach((li, i) => li.classList.toggle("now", i === at.i));
+    }
+  } else { $("nowStep").textContent = ""; }
+  requestAnimationFrame(draw);
+}
+
+// ---------- Boot ----------
+if (!S.seq.every(x => STEPS[x.s])) S.seq = DEFAULT.seq.slice();
+if (!S.rings.length) S.rings = DEFAULT.rings.slice();
+applyTheme(); renderDays(); renderGenre(); renderTempo(); renderRings(); renderCentres(); renderLib(); renderSeq(); renderPause();
+resize(); requestAnimationFrame(draw);
+loadYT();
+})();
+</script>

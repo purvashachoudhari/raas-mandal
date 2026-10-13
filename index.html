@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Raas Mandal</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2214%22 fill=%22%23f2a51a%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%227%22 fill=%22%234a0c17%22/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Baloo+Bhai+2:wght@500;600;700;800&family=Hind+Vadodara:wght@400;500;600&display=swap"
+    />
+  </head>
+  <body>
+    <div class="app">
+      <header class="top">
+        <div class="brand"><span class="gu">રાસ મંડળ</span><span class="en">Raas Mandal</span></div>
+        <div class="spacer"></div>
+        <div class="tonight" id="tonight"></div>
+        <button class="play-btn" id="playBtn" type="button">
+          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1l11 6-11 6z" fill="currentColor" /></svg>Play garba
+        </button>
+      </header>
+
+      <main class="studio">
+        <aside class="panel" id="panel" aria-label="Build your garba"></aside>
+        <section class="stage" id="stage">
+          <canvas id="stageCanvas" role="img" aria-label="Animated garba circles"></canvas>
+          <div class="stage-tag">Preview</div>
+          <div class="now-step" id="nowStep"></div>
+        </section>
+      </main>
+    </div>
+
+    <aside class="play-panel" id="playPanel" aria-label="Play controls" tabindex="-1" hidden></aside>
+
+    <!-- Shown instead of the app below 1024 px wide (laptop-only design). -->
+    <div class="narrow" role="note">
+      <div>
+        <p class="gu">રાસ મંડળ</p>
+        <h1>Open Raas Mandal on a laptop</h1>
+        <p>The garba ground needs a wider screen. Open this page on a laptop or desktop, or make the window at least 1024 pixels wide.</p>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

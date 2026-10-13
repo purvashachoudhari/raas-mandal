@@ -1,0 +1,38 @@
+export type NightNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+export type PrintId = "bandhani" | "patola" | "ajrakh" | "abhla";
+export type Gender = "women" | "men" | "alternate";
+export type Direction = "cw" | "ccw";
+export type StepId = "be" | "tran" | "dodhiyu" | "hinch" | "fudardi" | "dandiya";
+export type CentreId = "garbo" | "jyot" | "mataji" | "mandvi" | "pillar" | "dhol" | "rangoli";
+export type DecorId = "diyas" | "garland" | "lights" | "rangoliBorder";
+
+export interface Circle {
+  arrangement: Gender;
+  direction: Direction;
+}
+
+export interface SequenceItem {
+  step: StepId;
+  bars: number;
+}
+
+export interface Scene {
+  night: NightNumber;
+  print: PrintId;
+  circles: Circle[]; // 1–5, inner to outer
+  centre: CentreId;
+  betweenDecor: DecorId[];
+  sequence: SequenceItem[];
+  choreography: "manual" | "auto";
+  songId: string | null;
+}
+
+export interface BeatMap {
+  beats: number[]; // seconds
+  downbeats: number[]; // seconds
+  tempoCurve: { t: number; bpm: number }[];
+  bpm: number; // median
+  confidence: number; // 0–1
+  energy: number[]; // per-beat loudness, for auto choreography
+  version: number; // bump to invalidate cache
+}
