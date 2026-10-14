@@ -185,6 +185,11 @@ code { font-size: 12px; background: var(--chip); padding: 1px 4px; border-radius
 .yt-add input::placeholder { color: var(--muted); }
 .songs li { display: flex; align-items: center; gap: 4px; }
 .songs li .song { flex: 1; min-width: 0; }
+/* Now playing: the selected YouTube song's title and the space the player screen sits on (placed by main.ts). */
+.now-playing { display: grid; gap: 4px; }
+.now-playing .lbl { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.now-playing .np-title { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.now-playing .yt-slot { width: 100%; aspect-ratio: 16 / 9; min-height: 200px; margin-top: 4px; }
 .song .t { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
 .song .tt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .badge {

@@ -1,6 +1,9 @@
 import { TAU } from "../util/math";
 
 export interface StageLayout {
+  /** Ground centre in CSS px (the stage centre, unless Play mode moves it clear of the YouTube player). */
+  cx: number;
+  cy: number;
   /** Half the usable stage size. */
   half: number;
   /** Radius of the open centre where the centrepiece sits. */
@@ -36,10 +39,44 @@ export const EDGE_LIGHT_RADIUS = 0.012;
 /** Play mode keeps this fraction of the screen's shorter side free on every side. */
 const PLAY_MARGIN = 0.04;
 
-export function computeLayout(width: number, height: number, circleCount: number, playMode: boolean, decor = false): StageLayout {
+/** A screen area the ground must stay clear of, in stage CSS px. */
+export interface Rect { x: number; y: number; w: number; h: number }
+
+/** Play mode keeps at least this gap between the ground's edge lights and the YouTube player. */
+const AVOID_GAP = 12;
+
+/**
+ * Play mode ground: as large as the margin allows and centred, but clear of `avoid` (the YouTube
+ * player in the bottom-right corner). It first moves left, as far as the left margin; if that isn't
+ * enough room, it also shrinks just enough to fit. Returns the centre and the ground's outer radius
+ * (edge lights included).
+ */
+function placePlayGround(width: number, height: number, avoid: Rect | null) {
+  const margin = Math.min(width, height) * PLAY_MARGIN;
+  const full = Math.min(width, height) / 2 - margin;
+  const cx = width / 2, cy = height / 2;
+  if (!avoid) return { cx, cy, r: full };
+  // Vertical distance from the centre to the player (0 if level with it).
+  const dy = Math.max(avoid.y - cy, cy - (avoid.y + avoid.h), 0);
+  for (let r = full; r > full * 0.5; r -= 1) {
+    const reach = r + AVOID_GAP;
+    // Rightmost centre that keeps the ground clear: anything left of the player's left edge by more
+    // than the ground's half-width at the player's height.
+    const maxCx = dy >= reach ? Infinity : avoid.x - Math.sqrt(reach * reach - dy * dy);
+    const x = Math.min(cx, maxCx);
+    if (x - r >= margin) return { cx: x, cy, r };
+  }
+  return { cx, cy, r: full * 0.5 };
+}
+
+export function computeLayout(
+  width: number, height: number, circleCount: number, playMode: boolean, decor = false, avoid: Rect | null = null,
+): StageLayout {
   const short = Math.min(width, height);
-  // Play mode fits the whole ground, edge lights included, inside the margin.
-  const half = playMode ? (short * (0.5 - PLAY_MARGIN)) / (1 + EDGE_LIGHT_RADIUS) : (short / 2) * 0.94;
+  // Play mode fits the whole ground, edge lights included, inside the margin and clear of the player.
+  const ground = playMode ? placePlayGround(width, height, avoid) : { cx: width / 2, cy: height / 2, r: 0 };
+  const { cx, cy } = ground;
+  const half = playMode ? ground.r / (1 + EDGE_LIGHT_RADIUS) : (short / 2) * 0.94;
   const inner = half * 0.24;
   const k = circleCount;
   let outer = half * 0.9;
@@ -84,5 +121,5 @@ export function computeLayout(width: number, height: number, circleCount: number
     else gatherIn.push(gatherIn[i - 1] + Math.max(0, r - radii[i - 1] - GATHER_MIN_SPACING * size));
   });
 
-  return { half, inner, outer, size, radii, counts, lanes, gatherIn };
+  return { cx, cy, half, inner, outer, size, radii, counts, lanes, gatherIn };
 }

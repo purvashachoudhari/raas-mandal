@@ -15,6 +15,7 @@ import { autoSequence, barEnergies } from "./state/choreography";
 import { sequenceAt } from "./state/sequence";
 import { createStore } from "./state/store";
 import type { Scene, SequenceItem } from "./state/types";
+import type { Rect } from "./stage/layout";
 import { createRenderer } from "./stage/renderer";
 import { mountArrangement } from "./ui/arrangement";
 import { mountCentre } from "./ui/centre";
@@ -129,7 +130,6 @@ function enterPlay() {
     previewClock.resume();
   }
   playPanel.show();
-  requestAnimationFrame(placeYouTubeScreen);
   // The header's Play button is hidden now: keep keyboard focus in Play mode, on the panel itself.
   byId("playPanel").focus({ preventScroll: true });
   wake();
@@ -142,7 +142,6 @@ function exitPlay() {
   previewClock.resume();
   if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
   playPanel.hide();
-  requestAnimationFrame(placeYouTubeScreen);
   byId("playBtn").focus();
 }
 
@@ -215,29 +214,44 @@ function wake() {
 window.addEventListener("mousemove", () => { if (mode === "play") wake(); });
 
 // ---------- YouTube screen ----------
-// The YouTube player must stay visible while a YouTube song is active (YouTube's rules), and moving an
-// iframe in the page would reload it. So the screen stays put in the page and is positioned over a
-// corner of the stage in Build mode, or over its slot in the Play panel. It doesn't fade with the panel.
+// The YouTube player must stay visible while a YouTube song is selected (YouTube's rules), and moving an
+// iframe in the page would reload it. So the screen stays put in the page and is only positioned: in
+// Build mode over its slot in the Music section's Now playing box, in Play mode in the bottom-right
+// corner, where the ground keeps clear of it. It doesn't fade with the Play panel.
 const ytScreen = byId("ytScreen");
-const ytSlot = byId("playPanel").querySelector<HTMLElement>(".pp-video")!;
+const panelEl = byId("panel");
+const stageEl = byId("stage");
+/** Play mode player size and its gap to the window edges (CSS px). */
+const PLAY_SCREEN = { w: 356, h: 200, margin: 16 };
+/** The screen's rect in stage coordinates while it's in Play mode, for the ground to avoid. */
+let playScreenRect: Rect | null = null;
+let placed = "";
 function placeYouTubeScreen() {
-  const show = session.source === "youtube" && !session.error;
-  ytScreen.hidden = !show;
-  ytSlot.hidden = !(show && mode === "play");
-  if (!show) return;
-  let r: { left: number; top: number; width: number; height: number };
-  if (mode === "play") r = ytSlot.getBoundingClientRect();
-  else {
-    const stage = byId("stage").getBoundingClientRect();
-    const width = Math.min(320, stage.width * 0.32);
-    r = { left: stage.right - width - 16, top: stage.top + 14, width, height: (width * 9) / 16 };
+  const slot = document.getElementById("ytSlot");
+  let r: { left: number; top: number; width: number; height: number } | null = null;
+  let clip = "none";
+  if (session.source === "youtube" && !session.error) {
+    if (mode === "play") {
+      const { w, h, margin } = PLAY_SCREEN;
+      r = { left: window.innerWidth - w - margin, top: window.innerHeight - h - margin, width: w, height: h };
+    } else if (slot && slot.getClientRects().length) {
+      // Sit exactly on the slot, so it scrolls with the panel like any other content. Whatever part
+      // is scrolled out of the panel is clipped, so it never draws over the header or the ground.
+      const s = slot.getBoundingClientRect();
+      const p = panelEl.getBoundingClientRect();
+      r = { left: s.left, top: s.top, width: s.width, height: s.height };
+      const above = Math.max(0, p.top - s.top), below = Math.max(0, s.bottom - p.bottom);
+      if (above || below) clip = `inset(${above}px 0 ${below}px 0)`;
+    }
   }
-  Object.assign(ytScreen.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+  const stage = stageEl.getBoundingClientRect();
+  playScreenRect = r && mode === "play" ? { x: r.left - stage.left, y: r.top - stage.top, w: r.width, h: r.height } : null;
+  const key = r ? `${r.left},${r.top},${r.width},${r.height},${clip}` : "";
+  if (key === placed) return;
+  placed = key;
+  ytScreen.hidden = !r;
+  if (r) Object.assign(ytScreen.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, clipPath: clip });
 }
-session.subscribe(placeYouTubeScreen);
-window.addEventListener("resize", placeYouTubeScreen);
-new ResizeObserver(placeYouTubeScreen).observe(byId("stage"));
-new ResizeObserver(placeYouTubeScreen).observe(byId("playPanel"));
 
 // T taps the beat in either mode: tap-to-sync for YouTube songs, tap to correct for analysed files.
 document.addEventListener("keydown", (e) => {
@@ -260,6 +274,7 @@ function tick() {
   const beat = still ? 0 : c.beat();
   const stepBeat = still ? 0 : c.stepBeat();
 
+  placeYouTubeScreen(); // every frame: the slot moves with panel scrolling, list changes and resizes
   const sequence = activeSequence(scene);
   if (sequence !== shownSequence) {
     shownSequence = sequence;
@@ -273,6 +288,7 @@ function tick() {
     bpm: c.bpm(),
     moving: !still && !c.paused,
     playMode: mode === "play",
+    avoid: playScreenRect,
     time: performance.now() / 1000,
   });
 

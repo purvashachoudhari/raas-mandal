@@ -8,7 +8,7 @@
 .now-step .gu { font-family: var(--display); font-weight: 800; font-size: 26px; }
 .now-step .en { font-size: 13px; color: var(--muted); }
 
-/* YouTube player screen (it must stay visible while a YouTube song plays). */
+/* YouTube player screen (it must stay visible while a YouTube song is selected). */
 .yt-screen {
   position: fixed; z-index: 6; overflow: hidden; background: #000; box-sizing: border-box;
   border: 2px solid var(--accent); border-radius: 10px; box-shadow: 0 12px 32px -12px rgba(0,0,0,.7);

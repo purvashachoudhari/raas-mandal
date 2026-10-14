@@ -176,7 +176,16 @@ export function mountMusic(panel: HTMLElement, store: Store, library: Library, p
   session.subscribe(renderFix);
   player.subscribe(renderFix);
 
-  sec.append(drop, ytForm, msg, list, songError, preview, fix, note);
+  // Now playing: one fixed spot for the selected YouTube song. main.ts places the player screen over
+  // the slot (the iframe itself never moves in the page, or it would reload).
+  const nowPlaying = el(
+    "div",
+    { class: "now-playing", hidden: "" },
+    `<span class="lbl">Now playing</span><span class="np-title"></span><div class="yt-slot" id="ytSlot" aria-hidden="true"></div>`,
+  );
+  const npTitle = nowPlaying.querySelector<HTMLElement>(".np-title")!;
+
+  sec.append(drop, ytForm, msg, nowPlaying, list, songError, preview, fix, note);
   panel.append(sec);
 
   function showMessage(text: string) {
@@ -235,6 +244,8 @@ export function mountMusic(panel: HTMLElement, store: Store, library: Library, p
     }
 
     const song = library.find(current);
+    nowPlaying.hidden = !song || song.kind !== "youtube" || song.state === "error";
+    if (song) npTitle.textContent = song.title;
     preview.hidden = !song || song.state === "error";
     previewBtn.innerHTML = player.playing ? PAUSE : PLAY;
     previewBtn.setAttribute("aria-label", player.playing ? "Pause preview" : "Play preview");

@@ -135,7 +135,7 @@ Two song sources share one song list: **local files** and **YouTube**. Each song
 **YouTube**
 - A starter list of YouTube songs (title, artist, video ID) ships with the site in `src/data/youtubeSongs.ts`, so public visitors have songs ready without their own files.
 - An **Add YouTube link** box accepts any YouTube URL format (watch, youtu.be, shorts, embed, live, mobile and music links, with or without extra parameters) or a bare 11-character video ID. Invalid links get a clear message. Added links are kept in `localStorage` and can be removed; a user-added video takes its real title once it plays.
-- Playback uses the **YouTube IFrame Player API** (privacy-enhanced `youtube-nocookie.com` host). YouTube requires the player to stay visible, so it shows as a small framed screen in the top-right corner of the stage in Build mode and inside the left control panel in Play mode (§5.10); it stays visible when the rest of the panel auto-hides.
+- Playback uses the **YouTube IFrame Player API** (privacy-enhanced `youtube-nocookie.com` host). YouTube requires the player to stay visible, so it never sits over the garba ground. In Build mode it has one fixed spot in the Music section: a **Now playing** box between the Add YouTube link box and the song list, showing the song title and the player at full panel width and 16:9 (at least 200 px tall). The box stays in that place whichever song is selected and scrolls with the panel like any other content. In Play mode it sits in the bottom-right corner at 356×200 px with a 16 px margin, and the ground (edge lights included) keeps at least 12 px clear of it: the ground moves left first, as far as its margin allows, and shrinks only if that isn't enough. It stays visible when the Play panel auto-hides. Switching modes only repositions it; the video doesn't reload. Only YouTube songs show the player; local files don't.
 - Status: *Not synced yet* or *Synced · 124 bpm* (see §5.8), *Loading…*, or *Can't play here*.
 - Errors: if a video blocks embedding (error 101, 150 or 153) the app shows "This video's owner doesn't allow it to play on other sites. Try a different upload." Unavailable videos and YouTube failing to load get their own messages.
 
@@ -402,7 +402,7 @@ Runs once per song in a Web Worker.
 - [ ] Manual correction tools work when confidence is low
 - [ ] Play mode keyboard controls, auto-hiding control panel, ground fits the screen
 - [ ] Settings persist across reloads; no network calls except fonts (and YouTube, only when a YouTube song is used)
-- [ ] YouTube songs: starter list and added links show with badges; any link format is accepted and invalid links get a clear message; the player stays visible (stage corner in Build mode, control panel in Play mode); tap-to-sync after 4+ taps, saved per video; embedding errors show the message from §5.7
+- [ ] YouTube songs: starter list and added links show with badges; any link format is accepted and invalid links get a clear message; the player stays visible and never overlaps the ground (Now playing box in the Music section in Build mode, bottom-right in Play mode, ground clear of it at 1280×720, 1440×900 and 1920×1080), and switching modes doesn't reload it; tap-to-sync after 4+ taps, saved per video; embedding errors show the message from §5.7
 - [ ] Narrow-window message below 1024 px
 - **M7 Outfits — Deferred:** no checklist items in this version (spec kept in `docs/M7-outfits.md`).
 - [ ] Steps section shows Steps and Formations groups; both add into one sequence

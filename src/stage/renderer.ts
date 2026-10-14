@@ -7,7 +7,7 @@ import { TAU } from "../util/math";
 import { drawMan, drawWoman } from "./dancers";
 import { drawBetween } from "./festive/between";
 import { drawCentre } from "./festive/centrepieces";
-import { EDGE_LIGHT_RADIUS, computeLayout } from "./layout";
+import { EDGE_LIGHT_RADIUS, computeLayout, type Rect } from "./layout";
 import { PatternCache, printColours, tilePx } from "./patterns";
 import { blendPose, pose } from "./poses";
 import { bump, flash, mod } from "./pulse";
@@ -25,6 +25,8 @@ export interface Frame {
   /** False when paused or frozen for reduced motion: circles ease to a stop. */
   moving: boolean;
   playMode: boolean;
+  /** Play mode: screen area the ground must stay clear of (the YouTube player), in stage CSS px. */
+  avoid?: Rect | null;
   /** Seconds, only for easing circle speed between frames (never for pulses). */
   time: number;
 }
@@ -59,21 +61,20 @@ export function createRenderer(canvas: HTMLCanvasElement, host: HTMLElement): Re
   new ResizeObserver(resize).observe(host);
   resize();
 
-  function draw({ scene, beat, stepBeat, bpm, moving, playMode, time }: Frame) {
+  function draw({ scene, beat, stepBeat, bpm, moving, playMode, avoid = null, time }: Frame) {
     if (!ctx || !width || !height) return;
     const dt = lastTime === null ? 0 : Math.min(0.1, Math.max(0, time - lastTime));
     lastTime = time;
 
     const night = themeFor(scene.night);
-    const L = computeLayout(width, height, scene.circles.length, playMode, scene.betweenDecor.length > 0);
+    const L = computeLayout(width, height, scene.circles.length, playMode, scene.betweenDecor.length > 0, avoid);
     const pos = stepBeat === null ? null : sequenceAt(scene.sequence, stepBeat);
 
     // Background and centre glow.
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = night.bg;
     ctx.fillRect(0, 0, width, height);
-    const cx = width / 2;
-    const cy = height / 2;
+    const { cx, cy } = L;
     const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, L.half * 1.05);
     glow.addColorStop(0, night.glow);
     glow.addColorStop(1, night.bg);
