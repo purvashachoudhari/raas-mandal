@@ -1,5 +1,5 @@
 import type { BeatGrid } from "../analysis/corrections";
-import type { Player } from "./player";
+import type { Playback } from "./player";
 
 export interface BeatClock {
   /** Current beat position (beat index + fraction): drives every pulse, clap and hop. */
@@ -90,7 +90,7 @@ function localBpm(beats: number[], pos: number): number {
  * The one clock while a song is loaded: the song's playback position, mapped to the detected
  * beats when the analysis is ready, or to a steady preview tempo until then.
  */
-export function createSongClock(player: Player, grid: () => BeatGrid | null): BeatClock {
+export function createSongClock(player: Playback, grid: () => BeatGrid | null): BeatClock {
   const position = () => {
     const g = grid();
     const t = player.currentTime();

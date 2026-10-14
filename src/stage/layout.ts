@@ -17,7 +17,14 @@ export interface StageLayout {
    * and the first circle, then between each pair of circles. Dancers never enter them.
    */
   lanes: { r: number; w: number }[];
+  /** "Into the centre & out": how far each circle steps in at the deepest point (CSS px). */
+  gatherIn: number[];
 }
+
+/** How far a dancer reaches towards the centre from its circle line (× size). */
+const DANCER_INNER = 0.47;
+/** Closest two circle lines may come while gathering in (× size): a dancer's depth plus half a dancer's width. */
+const GATHER_MIN_SPACING = 1.16;
 
 /** Radial room one circle of dancers needs (× size): head, raised arms, flared ghagra, hops and spins. */
 const DANCER_BAND = 1.24;
@@ -66,5 +73,16 @@ export function computeLayout(width: number, height: number, circleCount: number
     return n % 2 ? n - 1 : n;
   });
 
-  return { half, inner, outer, size, radii, counts, lanes };
+  // Into the centre & out: the inner circle steps in until its dancers reach the centrepiece's edge
+  // (at most about one dancer, and at most a fifth of its radius so it doesn't crowd). Each outer
+  // circle moves the same amount plus any room beyond GATHER_MIN_SPACING to the circle inside it,
+  // so outer circles move more and circles never come closer together than that (or than at rest).
+  const centreEdge = inner * 0.62 * 0.85 + (DANCER_INNER + 0.08) * size;
+  const gatherIn: number[] = [];
+  radii.forEach((r, i) => {
+    if (i === 0) gatherIn.push(Math.max(0, Math.min(r - centreEdge, 0.9 * size, 0.2 * r)));
+    else gatherIn.push(gatherIn[i - 1] + Math.max(0, r - radii[i - 1] - GATHER_MIN_SPACING * size));
+  });
+
+  return { half, inner, outer, size, radii, counts, lanes, gatherIn };
 }

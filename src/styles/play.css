@@ -39,3 +39,4 @@ body.playing .now-step { display: none; }
 body.playing .studio { grid-template-columns: 1fr; }
 body.playing .app { grid-template-rows: 1fr; }
 .play-panel:focus { outline: none; }
+.pp-video { width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; flex: none; }

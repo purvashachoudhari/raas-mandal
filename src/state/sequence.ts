@@ -34,3 +34,25 @@ export function sequenceAt(seq: readonly SequenceItem[], beat: number): Sequence
   }
   return null;
 }
+
+/**
+ * Partner swaps completed before this point in the looping sequence (one per bar of a Partner swap
+ * item). Its parity tells whether partners stand in each other's places, so swapped positions persist
+ * through the song and stay correct after scrubbing.
+ */
+export function swapsBefore(seq: readonly SequenceItem[], beat: number): number {
+  const total = sequenceBeats(seq);
+  if (!total || beat <= 0) return 0;
+  const perLoop = seq.reduce((n, item) => n + (item.step === "partnerSwap" ? item.bars : 0), 0);
+  if (!perLoop) return 0;
+  const loops = Math.floor(beat / total);
+  let p = beat - loops * total;
+  let count = loops * perLoop;
+  for (const item of seq) {
+    const len = item.bars * BEATS_PER_BAR;
+    if (item.step === "partnerSwap") count += p >= len ? item.bars : Math.floor(p / BEATS_PER_BAR);
+    if (p < len) break;
+    p -= len;
+  }
+  return count;
+}

@@ -21,7 +21,7 @@ Raas Mandal (રાસ મંડળ) is a laptop web app for people who are away
 
 ### Non-goals (this version)
 - Phone or tablet layouts.
-- Streaming music (YouTube, Spotify).
+- Streaming services other than YouTube (for example Spotify). YouTube is supported as a song source (§5.7).
 - Accounts, cloud saving, multiplayer or shared live rooms.
 - Angled 2.5D or 3D views (the renderer must make these possible later, see §9).
 - Per-circle step sequences.
@@ -124,17 +124,31 @@ One print applies to **all dancers, men and women alike**. Prints render in the 
 
 ### 5.7 Music (P0)
 
-- Songs live as audio files in the project's `music/` folder (`.mp3`, `.m4a`, `.wav`, `.ogg`).
+Two song sources share one song list: **local files** and **YouTube**. Each song shows a small badge, **File** or **YouTube**.
+
+**Local files**
+- Songs live as audio files in the project's `music/` folder (`.mp3`, `.m4a`, `.wav`, `.ogg`). `music/` stays git-ignored, so song files are never committed or published.
 - `npm run music` scans the folder and writes `music/manifest.json` (title from file tags or filename, duration).
-- The app also accepts files by **drag and drop** or a file picker at runtime, so the deployed site works with anyone's own songs.
-- Song list shows title, duration, and analysis status: *Not analysed*, *Analysing 40%*, *Ready · 132 bpm*, or *Couldn't analyse*.
-- Selecting a song starts analysis if needed. Only one song is active at a time.
-- Playback: preview controls in Build mode (play/pause, scrub); full playback in Play mode.
+- The app also accepts files by **drag and drop** or a file picker at runtime. Dropped files last until the page is reloaded.
+- Status: *Not analysed*, *Analysing 40%*, *Ready · 132 bpm*, or *Couldn't analyse*.
+
+**YouTube**
+- A starter list of YouTube songs (title, artist, video ID) ships with the site in `src/data/youtubeSongs.ts`, so public visitors have songs ready without their own files.
+- An **Add YouTube link** box accepts any YouTube URL format (watch, youtu.be, shorts, embed, live, mobile and music links, with or without extra parameters) or a bare 11-character video ID. Invalid links get a clear message. Added links are kept in `localStorage` and can be removed; a user-added video takes its real title once it plays.
+- Playback uses the **YouTube IFrame Player API** (privacy-enhanced `youtube-nocookie.com` host). YouTube requires the player to stay visible, so it shows as a small framed screen in the top-right corner of the stage in Build mode and inside the left control panel in Play mode (§5.10); it stays visible when the rest of the panel auto-hides.
+- Status: *Not synced yet* or *Synced · 124 bpm* (see §5.8), *Loading…*, or *Can't play here*.
+- Errors: if a video blocks embedding (error 101, 150 or 153) the app shows "This video's owner doesn't allow it to play on other sites. Try a different upload." Unavailable videos and YouTube failing to load get their own messages.
+
+**Both sources**
+- Selecting a song makes it the active song (only one at a time): a local file starts analysis if needed; a YouTube video is cued.
+- Playback: preview controls in Build mode (play/pause, scrub); full playback in Play mode. Play/pause, scrubbing, keyboard controls and the auto-hiding panel work the same for both sources.
 - No synth dhol is required in this version; the prototype's synth may remain as a fallback when no song is selected (P2).
 
-### 5.8 Automatic beat matching (P0)
+### 5.8 Beat matching (P0)
 
-When a song is selected the app detects its beats, downbeats and tempo changes, and the dancers follow them. Full spec in §8.
+The dancers follow the song's beats through one beat clock (§8): song time → beat position. How the beats are found depends on the source.
+
+**Local files: automatic beat matching.** When a file is selected the app detects its beats, downbeats and tempo changes. Full spec in §8.
 
 - Runs in a Web Worker so the UI stays responsive; shows progress.
 - Results cached per file, so a song is analysed once.
@@ -142,22 +156,53 @@ When a song is selected the app detects its beats, downbeats and tempo changes, 
 - Manual corrections available but optional: nudge the beat earlier/later (±10 ms steps), halve or double the tempo, and **Tap to correct** (tap 8 beats to re-fit the phase).
 - **Acceptance:** on the test set (§12), at least 90% of detected beats fall within ±70 ms of hand-marked beats, and step changes land on downbeats.
 
+**YouTube: tap-to-sync.** YouTube audio can't be analysed, so the user sets the beat by tapping along.
+
+- While the song plays, the user presses **Tap beat** (button, or the **T** key in either mode) on every beat, starting on beat 1 of a bar. After **4 or more taps**, tempo and phase are fitted with a **least-squares line** through the tap times (each tap numbered by the nearest whole beat, so a missed beat doesn't skew it). Further taps refine the fit; a pause of more than 2.5 s starts a new set.
+- The fit becomes an even beat grid, so the beat clock, downbeat-aligned step changes, pre-roll and Play mode behave exactly as for analysed files. The sequence starts on the bar line in step with the first tap.
+- The beat clock reads the player's current time, **smoothed between YouTube's coarse updates** (extrapolated from the last reading and gently pulled towards each new one; a seek is trusted until YouTube reports the new position).
+- Tools: nudge earlier/later (±10 ms), **½×** and **2×** tempo, and Reset.
+- Saved per video in `localStorage` (tempo, phase and nudge), so a song is synced once per browser.
+- Before syncing, the dancers move at a default **120 bpm**.
+- Auto choreography (§5.9) needs an analysed file's energy curve; with a YouTube song the manual sequence plays.
+
 ### 5.9 Steps (P0)
 
-A preset library of six steps. The user arranges them into one sequence that every circle performs together; the sequence loops for the length of the song.
+A preset library of ten steps and two whole-circle formations. The user arranges them into one sequence that every circle performs together; the sequence loops for the length of the song. Every move follows the same rules: poses are pure functions of `(step, beatPosInStep, dancerIndex)`, all motion is driven by the beat clock (§8), step changes snap to downbeats, and moves blend over the first quarter-beat.
 
-| Step | Gujarati | Feel | Length unit | Motion |
+**Steps** (સ્ટેપ્સ)
+
+| Step | Gujarati | Feel | Length unit | Travel | Motion (seen from above) |
+|---|---|---|---|---|---|
+| Be Taali | બે તાળી | Two claps | 1 bar (4 beats) | 1.0 | Step and turn, two claps on beats 3 and 4, gentle sway |
+| Tran Taali | ત્રણ તાળી | Three claps | 1 bar | 1.1 | Step back and in, three quick claps |
+| Dodhiyu | દોઢિયું | Fast hop | 1 bar | 1.8 | Hop every beat, alternating in/out, arms open and close; circle travels fastest |
+| Hinch | હીંચ | 6/8 sway | 2 beats | 0.7 | Hip-pivot sway left/right, slow travel, one clap per cycle |
+| Fudardi | ફુદરડી | Spin | 2 beats | 1.2 | Full turn every 2 beats, ghagra flares wide |
+| Dandiya | દાંડિયા | Pairs | 1 bar | 0.6 | Partners face each other, sticks clack on the off-beats, partners swap every bar |
+| Popatiyu | પોપટિયું | Parrot | 1 bar | 0.5 | Playful "parrot" step. Beats 1–2: dancers dip low (body scales down slightly, ghagra spreads wider as they crouch), arms forward and low. Beats 3–4: two quick bobs with low claps close to the ground, then rise on the next downbeat. Small side-to-side head tilt on each bob. |
+| Sanedo | સનેડો | Kutchi bounce | 1 bar | 1.0 | Bouncy Kutchi folk step. A bounce on every beat; arms swing together to one side and then the other on alternate beats; a quick shoulder shake (small rapid sway) on each off-beat. |
+| Hudo | હુડો | Partner claps | 1 bar | 0.5 | Dancers pair up with their neighbour (even/odd index) and turn to face each other, as in Dandiya. Beats 1 and 3: each dancer claps their own hands. Beats 2 and 4: partners clap each other's palms, hands meeting in the space between them with a clap spark there. Partners switch sides every 2 bars. |
+| Tippani | ટિપ્પણી | Stick strikes | 1 bar | 0.6 | Traditional Saurashtra step with a tippani: a long stick with a small wooden block at the end. Each dancer holds it in both hands and strikes the ground just in front of them on every beat, bending forward on the strike. Each strike shows a small dust ring at the block. The stick is a new prop (wood colour with an accent band). |
+
+**Formations** (રચના)
+
+| Formation | Gujarati | Length | Travel | Motion |
 |---|---|---|---|---|
-| Be Taali | બે તાળી | Two claps | 1 bar (4 beats) | Step and turn, two claps on beats 3 and 4, gentle sway |
-| Tran Taali | ત્રણ તાળી | Three claps | 1 bar | Step back and in, three quick claps |
-| Dodhiyu | દોઢિયું | Fast hop | 1 bar | Hop every beat, alternating in/out, arms open and close; circle travels fastest |
-| Hinch | હીંચ | 6/8 sway | 2 beats | Hip-pivot sway left/right, slow travel, one clap per cycle |
-| Fudardi | ફુદરડી | Spin | 2 beats | Full turn every 2 beats, ghagra flares wide |
-| Dandiya | દાંડિયા | Pairs | 1 bar | Partners face each other, sticks clack on the off-beats, partners swap every bar |
+| Into the centre & out | અંદર-બહાર | 2 bars | 0.2 | Beats 1–4: every circle steps inward toward the centrepiece while arms rise, with a big shared clap on beat 4. Beats 5–8: everyone steps back out to their normal radius, arms lowering. Inner circles move less than outer circles so no dancer overlaps the centrepiece or another circle; keep at least half a dancer's width between circles at the closest point. |
+| Partner swap | જોડી બદલો | 1 bar | 0.8 | Dancers pair with their neighbour (even/odd index). Over beats 1–3 each pair orbits around the point between them, half a turn, so they end in each other's place; a clap on beat 4. Positions **stay swapped** afterwards (the circle keeps a swap offset), so with **Alternate** arrangement men and women trade places around the circle. |
 
-- Sequence editor: add from library, reorder, remove, set length in bars (1 to 16).
+- Hudo and Partner swap need an even dancer count per circle, which the layout already guarantees (§5.3).
+- Props: Dandiya sticks and the tippani appear only while their step is active, then disappear.
+- Each circle's swap offset is the number of partner swaps completed so far, derived from the sequence position, so it stays correct through loops and after scrubbing.
+- Sequence editor: the step library is split into **Steps** and **Formations** groups; both add into the **same sequence**, so a formation can sit between steps (for example Be Taali 2 bars → Into the centre & out → Dodhiyu 4 bars). Reorder, remove, and set length in bars (1 to 16; formations longer than one bar change length in whole repeats).
 - Default sequence: Be Taali 2 bars → Tran Taali 2 → Hinch 2 → Dodhiyu 4 → Fudardi 1 → Dandiya 2.
-- **Auto choreography (P1):** picks steps from the song's energy curve: calm sections get Hinch and Be Taali, high-energy sections Dodhiyu and Dandiya, a Fudardi at section changes.
+- **Auto choreography (P1):** picks steps from the song's energy curve:
+  - Low energy: Hinch, Be Taali, Popatiyu
+  - Medium energy: Tran Taali, Hudo, Tippani
+  - High energy: Dodhiyu, Sanedo, Dandiya
+  - Section changes: Fudardi or Into the centre & out
+  - End of a long phrase (every 8 bars in one energy level): Partner swap
 - Steps blend into each other over the first quarter-beat to avoid pops.
 
 ### 5.10 Play mode (P0)
@@ -209,7 +254,8 @@ raas-mandal/
     │   ├── nights.ts         # §5.1 table
     │   ├── prints.ts         # print metadata
     │   ├── steps.ts          # §5.9 table
-    │   └── festive.ts        # centre + between-circle elements
+    │   ├── festive.ts        # centre + between-circle elements
+    │   └── youtubeSongs.ts   # starter YouTube songs that ship with the site
     ├── ui/                   # one module per panel section + Play mode panel
     ├── stage/
     │   ├── renderer.ts       # frame loop, layout, draw order
@@ -219,7 +265,10 @@ raas-mandal/
     │   ├── patterns/         # bandhani.ts, patola.ts, ajrakh.ts, abhla.ts
     │   └── festive/          # centrepieces and between-circle decor
     ├── audio/
-    │   ├── library.ts        # manifest + drag-drop files
+    │   ├── library.ts        # manifest, drag-drop files, YouTube songs
+    │   ├── media.ts          # one playback interface over files and YouTube
+    │   ├── youtube.ts        # IFrame Player API, link parsing, error messages
+    │   ├── tapSync.ts        # YouTube tap-to-sync: least-squares fit, beat grid, storage
     │   ├── player.ts         # decode, play, seek, clock
     │   └── beatClock.ts      # audio time → beat position
     ├── analysis/
@@ -237,6 +286,19 @@ raas-mandal/
 type Gender = "women" | "men" | "alternate";
 type Direction = "cw" | "ccw";
 interface Circle { arrangement: Gender; direction: Direction }
+type StepId =
+  | "beTaali" | "tranTaali" | "dodhiyu" | "hinch" | "fudardi" | "dandiya"
+  | "popatiyu" | "sanedo" | "hudo" | "tippani"
+  | "centreInOut" | "partnerSwap";
+interface StepDef {
+  id: StepId;
+  group: "step" | "formation";
+  gu: string; en: string;
+  unitBeats: number;     // 2, 4 or 8
+  travel: number;        // circle speed factor
+  pairs?: boolean;       // Dandiya, Hudo, Partner swap
+  prop?: "dandiya" | "tippani";
+}
 interface SequenceItem { step: StepId; bars: number }
 interface Scene {
   night: 1|2|3|4|5|6|7|8|9;
@@ -325,6 +387,8 @@ Runs once per song in a Web Worker.
 | M4 | Beat matching | Worker pipeline, cache, beat clock driving all animation; test-set accuracy met |
 | M5 | Festive polish | Between-circle decor, beat-driven lights, auto choreography |
 | M6 | QA and release | Quality targets in §10 met; accessibility pass; v1 deployed |
+| M7 | Outfits — **Deferred** | Outfit customization (spec in `docs/M7-outfits.md`) was built and then removed; not part of this version |
+| M8 | More steps and formations | Popatiyu, Sanedo, Hudo, Tippani and the two formations in §5.9 drawn and beat-synced; Steps/Formations library groups; auto choreography uses them |
 
 ## 14. Release checklist
 
@@ -337,8 +401,19 @@ Runs once per song in a Web Worker.
 - [ ] Steps change on downbeats; claps land on beats
 - [ ] Manual correction tools work when confidence is low
 - [ ] Play mode keyboard controls, auto-hiding control panel, ground fits the screen
-- [ ] Settings persist across reloads; no network calls except fonts
+- [ ] Settings persist across reloads; no network calls except fonts (and YouTube, only when a YouTube song is used)
+- [ ] YouTube songs: starter list and added links show with badges; any link format is accepted and invalid links get a clear message; the player stays visible (stage corner in Build mode, control panel in Play mode); tap-to-sync after 4+ taps, saved per video; embedding errors show the message from §5.7
 - [ ] Narrow-window message below 1024 px
+- **M7 Outfits — Deferred:** no checklist items in this version (spec kept in `docs/M7-outfits.md`).
+- [ ] Steps section shows Steps and Formations groups; both add into one sequence
+- [ ] Popatiyu, Sanedo, Hudo and Tippani are each clearly recognisable at 3 and 5 circles
+- [ ] Hudo partner claps land between the partners on beats 2 and 4
+- [ ] Tippani sticks strike the ground on every beat and the dust ring shows at the strike
+- [ ] Into the centre & out never overlaps the centrepiece or neighbouring circles at 5 circles
+- [ ] Partner swap leaves dancers in their new places; with Alternate, men and women trade places
+- [ ] All new moves stay in time with the beat after scrubbing
+- [ ] Auto choreography uses the new steps and formations
+- [ ] Still 60 fps at 5 circles with all decorations on (the outfits part waits for M7, which is deferred)
 
 ## 15. Open questions
 
@@ -353,5 +428,5 @@ Runs once per song in a Web Worker.
 - Angled 2.5D balcony view using the same poses.
 - Per-circle step sequences.
 - Share a scene as a link (scene encoded in the URL).
-- More genres and steps (Popatiyu, Sanedo), and more prints (Leheriya-style, Kutchi embroidery panels).
+- More genres and steps, and more prints (Leheriya-style, Kutchi embroidery panels).
 - Recording a clip of the dance to share.

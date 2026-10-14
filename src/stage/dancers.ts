@@ -25,45 +25,89 @@ export interface Outfit {
 }
 
 
-function drawArms(ctx: CanvasRenderingContext2D, s: number, p: Pose, stickColour: string) {
-  const a = clamp(p.arms, 0, 1);
+const WOOD = "#b07a3c";
+const WOOD_DARK = "#7a4f22";
+
+function drawArms(ctx: CanvasRenderingContext2D, s: number, p: Pose, accent: string) {
+  const a = clamp(p.arms, 0, 1), fwd = clamp(p.fwd, 0, 1), reach = clamp(p.reach, 0, 1);
   const hands: [number, number, number, number][] = []; // hand x, y and forearm direction
   ctx.strokeStyle = SKIN; ctx.lineWidth = 0.045 * s; ctx.lineCap = "round";
   ctx.beginPath();
   for (const side of [-1, 1]) {
-    const sx = side * 0.075 * s, sy = -0.22 * s;
-    const hx = side * (0.3 + (0.035 - 0.3) * a) * s, hy = (-0.4 + (-0.58 + 0.4) * a) * s;
-    const ex = side * (0.25 + (0.14 - 0.25) * a) * s, ey = (-0.18 + (-0.36 + 0.18) * a) * s;
-    ctx.moveTo(sx, sy); ctx.quadraticCurveTo(ex, ey, hx, hy);
+    const sx = side * 0.075, sy = -0.22;
+    // Lowered (out to the sides) to raised (together above the head).
+    let hx = side * (0.3 + (0.035 - 0.3) * a), hy = -0.4 + (-0.58 + 0.4) * a;
+    let ex = side * (0.25 + (0.14 - 0.25) * a), ey = -0.18 + (-0.36 + 0.18) * a;
+    // Forward and low: hands in front of the body, towards the centre.
+    hx += (side * 0.07 - hx) * fwd; hy += (0.04 - hy) * fwd;
+    ex += (side * 0.16 - ex) * fwd; ey += (-0.08 - ey) * fwd;
+    // Both hands swung to one side.
+    hx += 0.13 * p.armsSide; ex += 0.06 * p.armsSide;
+    // Reaching to the partner: hands meet theirs halfway between the two dancers.
+    const rx = p.reachX * 0.3 + side * 0.02, ry = -0.16 + p.reachY * 0.3;
+    hx += (rx - hx) * reach; hy += (ry - hy) * reach;
+    ex += ((sx + rx) / 2 + side * 0.04 - ex) * reach; ey += ((sy + ry) / 2 - ey) * reach;
+
+    ctx.moveTo(sx * s, sy * s); ctx.quadraticCurveTo(ex * s, ey * s, hx * s, hy * s);
     const len = Math.hypot(hx - ex, hy - ey) || 1;
-    hands.push([hx, hy, (hx - ex) / len, (hy - ey) / len]);
+    hands.push([hx * s, hy * s, (hx - ex) / len, (hy - ey) / len]);
   }
   ctx.stroke();
-  if (p.stick) {
+
+  if (p.prop === "dandiya") {
     ctx.strokeStyle = "#c48a3c"; ctx.lineWidth = 0.032 * s;
     ctx.beginPath();
     for (const [hx, hy, ux, uy] of hands) { ctx.moveTo(hx, hy); ctx.lineTo(hx + ux * 0.24 * s, hy + uy * 0.24 * s); }
     ctx.stroke();
-    ctx.strokeStyle = stickColour; ctx.lineWidth = 0.034 * s;
+    ctx.strokeStyle = accent; ctx.lineWidth = 0.034 * s;
     ctx.beginPath();
     for (const [hx, hy, ux, uy] of hands) { ctx.moveTo(hx + ux * 0.17 * s, hy + uy * 0.17 * s); ctx.lineTo(hx + ux * 0.22 * s, hy + uy * 0.22 * s); }
     ctx.stroke();
+  } else if (p.prop === "tippani") {
+    drawTippani(ctx, s, p, accent, (hands[0][0] + hands[1][0]) / 2, (hands[0][1] + hands[1][1]) / 2);
   }
+
   ctx.fillStyle = SKIN;
   ctx.beginPath();
   for (const [hx, hy] of hands) circle(ctx, hx, hy, 0.028 * s);
   ctx.fill();
-  // Clap spark above the hands.
+
+  // Own clap spark: above the head, or low in front for claps close to the ground.
   if (p.flash > 0.3) {
     ctx.strokeStyle = `rgba(255,236,170,${Math.min(1, p.flash)})`; ctx.lineWidth = 0.022 * s;
-    const cy = (p.stick ? -0.72 : -0.64) * s, r0 = 0.05 * s, r1 = (0.05 + 0.08 * p.flash) * s;
+    const low = fwd > 0.5;
+    const cx = low ? (hands[0][0] + hands[1][0]) / 2 : 0;
+    const cy = low ? (hands[0][1] + hands[1][1]) / 2 + 0.03 * s : (p.prop === "dandiya" ? -0.72 : -0.64) * s;
+    const r0 = 0.05 * s, r1 = (0.05 + 0.08 * p.flash) * s;
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
       const an = (i / 6) * TAU;
-      ctx.moveTo(Math.cos(an) * r0, cy + Math.sin(an) * r0); ctx.lineTo(Math.cos(an) * r1, cy + Math.sin(an) * r1);
+      ctx.moveTo(cx + Math.cos(an) * r0, cy + Math.sin(an) * r0); ctx.lineTo(cx + Math.cos(an) * r1, cy + Math.sin(an) * r1);
     }
     ctx.stroke();
   }
+}
+
+/**
+ * Tippani: a long stick held in both hands with a wooden block at the end, struck on the ground in
+ * front of the dancer. A dust ring spreads from the block after each strike.
+ */
+function drawTippani(ctx: CanvasRenderingContext2D, s: number, p: Pose, accent: string, gx: number, gy: number) {
+  const tipX = 0, tipY = (0.52 + 0.1 * p.strike) * s;
+  if (p.dust >= 0 && p.dust < 1) {
+    const fade = (1 - p.dust) ** 1.5;
+    ctx.fillStyle = `rgba(236,218,178,${0.25 * fade})`;
+    ctx.strokeStyle = `rgba(240,224,188,${0.85 * fade})`; ctx.lineWidth = 0.028 * s;
+    ctx.beginPath(); circle(ctx, tipX, tipY, (0.07 + 0.2 * p.dust) * s); ctx.fill(); ctx.stroke();
+  }
+  ctx.strokeStyle = WOOD; ctx.lineWidth = 0.03 * s; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(gx, gy - 0.06 * s); ctx.lineTo(tipX, tipY); ctx.stroke();
+  // Accent band just below the grip.
+  const bx = gx + (tipX - gx) * 0.18, by = gy + (tipY - gy) * 0.18;
+  ctx.strokeStyle = accent; ctx.lineWidth = 0.036 * s;
+  ctx.beginPath(); ctx.moveTo(bx, by - 0.02 * s); ctx.lineTo(bx + (tipX - gx) * 0.06, by + (tipY - gy) * 0.06); ctx.stroke();
+  ctx.fillStyle = WOOD_DARK;
+  ctx.beginPath(); ctx.roundRect(tipX - 0.045 * s, tipY - 0.03 * s, 0.09 * s, 0.06 * s, 0.015 * s); ctx.fill();
 }
 
 /** Point i of n along a hem curve: half-width w, end height y, sagging by `sag` at the middle. */

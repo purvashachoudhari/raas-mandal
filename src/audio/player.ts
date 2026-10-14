@@ -1,8 +1,7 @@
 export type PlayerEvent = "loading" | "ready" | "error" | "play" | "pause" | "seek" | "ended" | "unload";
 
-export interface Player {
-  /** Fetch and decode a song. Resolves false if it failed or a newer load replaced it. */
-  load(id: string, read: () => Promise<ArrayBuffer>): Promise<boolean>;
+/** What the clock, the panels and the keyboard need from any song source (local file or YouTube). */
+export interface Playback {
   unload(): void;
   play(): void;
   pause(): void;
@@ -15,9 +14,15 @@ export interface Player {
   readonly loading: boolean;
   readonly playing: boolean;
   readonly duration: number;
+  subscribe(fn: (event: PlayerEvent) => void): () => void;
+}
+
+/** Local song files: decoded with Web Audio, so their beats can be analysed. */
+export interface Player extends Playback {
+  /** Fetch and decode a song. Resolves false if it failed or a newer load replaced it. */
+  load(id: string, read: () => Promise<ArrayBuffer>): Promise<boolean>;
   /** Decoded audio, for beat analysis (M4). */
   readonly buffer: AudioBuffer | null;
-  subscribe(fn: (event: PlayerEvent) => void): () => void;
 }
 
 /** Decodes the whole song with Web Audio and plays it from an AudioBufferSourceNode. */

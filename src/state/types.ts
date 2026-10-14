@@ -2,7 +2,10 @@ export type NightNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 export type PrintId = "bandhani" | "patola" | "ajrakh" | "abhla";
 export type Gender = "women" | "men" | "alternate";
 export type Direction = "cw" | "ccw";
-export type StepId = "be" | "tran" | "dodhiyu" | "hinch" | "fudardi" | "dandiya";
+export type StepId =
+  | "beTaali" | "tranTaali" | "dodhiyu" | "hinch" | "fudardi" | "dandiya"
+  | "popatiyu" | "sanedo" | "hudo" | "tippani"
+  | "centreInOut" | "partnerSwap";
 export type CentreId = "garbo" | "jyot" | "mataji" | "mandvi" | "pillar" | "dhol" | "rangoli";
 export type DecorId = "diyas" | "garland" | "lights" | "rangoliBorder";
 

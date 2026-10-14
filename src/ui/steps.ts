@@ -1,4 +1,4 @@
-import { MAX_BARS, MIN_BARS, STEPS, STEP_IDS } from "../data/steps";
+import { MAX_BARS, STEPS, STEP_IDS, barStep } from "../data/steps";
 import type { Store } from "../state/store";
 import type { SequenceItem } from "../state/types";
 import { el, rebuild, revealInList, section, segmented } from "./dom";
@@ -20,12 +20,17 @@ export function mountSteps(panel: HTMLElement, store: Store): StepsPanel {
   auto.append(autoNote, planList);
   manual.append(el("p", { class: "note" }, "Add steps in the order you want. Every circle dances the sequence together, and it loops."));
 
-  const lib = el("div", { class: "lib", role: "group", "aria-label": "Add a step" });
-  for (const id of STEP_IDS) {
-    const st = STEPS[id];
-    const b = el("button", { type: "button", title: `Add ${st.en} (${st.feel})` }, `+ <span class="gu">${st.gu}</span>${st.en}`);
-    b.onclick = () => store.update((d) => { d.sequence.push({ step: id, bars: st.defaultBars }); });
-    lib.append(b);
+  // Library: dance steps and whole-circle formations, both adding into the same sequence.
+  const lib = el("div", { class: "lib-groups" });
+  for (const [group, gu, en] of [["step", "સ્ટેપ્સ", "Steps"], ["formation", "રચના", "Formations"]] as const) {
+    const row = el("div", { class: "lib", role: "group", "aria-label": `Add from ${en}` });
+    for (const id of STEP_IDS.filter((i) => STEPS[i].group === group)) {
+      const st = STEPS[id];
+      const b = el("button", { type: "button", title: `Add ${st.en} (${st.feel})` }, `+ <span class="gu">${st.gu}</span>${st.en}`);
+      b.onclick = () => store.update((d) => { d.sequence.push({ step: id, bars: st.defaultBars }); });
+      row.append(b);
+    }
+    lib.append(el("h3", { class: "sub-h" }, `${en} · ${gu}`), row);
   }
 
   const list = el("ol", { class: "seq", "aria-label": "Step sequence" });
@@ -56,7 +61,7 @@ export function mountSteps(panel: HTMLElement, store: Store): StepsPanel {
       ? ""
       : plan
         ? "Steps follow the song's energy: Hinch and Be Taali in calm parts, Dodhiyu and Dandiya when it builds, a Fudardi at each change."
-        : "Auto picks steps from an analysed song's energy. Select a song and wait for its analysis; until then your manual sequence plays.";
+        : "Auto picks steps from an analysed song file's energy. Select a song file and wait for its analysis; until then, and for YouTube songs (which can't be analysed), your manual sequence plays.";
     planList.hidden = !isAuto || !plan;
     current = -1;
   }
@@ -94,9 +99,9 @@ export function mountSteps(panel: HTMLElement, store: Store): StepsPanel {
             `<span class="n">${i + 1}</span>
              <span class="nm"><span class="gu">${st.gu}</span><br><span class="en">${st.en} · ${st.feel}</span></span>
              <span class="bars">
-               <button type="button" data-a="less" data-focus="less-${i}" aria-label="Shorter" ${item.bars <= MIN_BARS ? "disabled" : ""}>−</button>
+               <button type="button" data-a="less" data-focus="less-${i}" aria-label="Shorter" ${item.bars <= barStep(item.step) ? "disabled" : ""}>−</button>
                <span>${item.bars} ${item.bars === 1 ? "bar" : "bars"}</span>
-               <button type="button" data-a="more" data-focus="more-${i}" aria-label="Longer" ${item.bars >= MAX_BARS ? "disabled" : ""}>+</button>
+               <button type="button" data-a="more" data-focus="more-${i}" aria-label="Longer" ${item.bars + barStep(item.step) > MAX_BARS ? "disabled" : ""}>+</button>
              </span>
              <span class="ops">
                <button type="button" data-a="up" data-focus="up-${i}" aria-label="Move up" ${i === 0 ? "disabled" : ""}>↑</button>
@@ -108,8 +113,10 @@ export function mountSteps(panel: HTMLElement, store: Store): StepsPanel {
             const a = (e.target as HTMLElement).closest("button")?.dataset.a;
             if (!a) return;
             edit((s) => {
-              if (a === "less") s[i].bars = Math.max(MIN_BARS, s[i].bars - 1);
-              if (a === "more") s[i].bars = Math.min(MAX_BARS, s[i].bars + 1);
+              // Formations change length in whole repeats (Into the centre & out is 2 bars long).
+              const unit = barStep(s[i].step);
+              if (a === "less") s[i].bars = Math.max(unit, s[i].bars - unit);
+              if (a === "more" && s[i].bars + unit <= MAX_BARS) s[i].bars += unit;
               if (a === "up" && i > 0) [s[i - 1], s[i]] = [s[i], s[i - 1]];
               if (a === "down" && i < s.length - 1) [s[i + 1], s[i]] = [s[i], s[i + 1]];
               if (a === "del") s.splice(i, 1);

@@ -1,4 +1,6 @@
+import { YOUTUBE_SONGS } from "../data/youtubeSongs";
 import { AUDIO_EXTENSIONS, type Manifest } from "./manifest";
+import { loadSync } from "./tapSync";
 
 export type SongState = "idle" | "loading" | "ready" | "error";
 
@@ -20,7 +22,14 @@ export interface Song {
   /** Seconds, or null until known. */
   duration: number | null;
   /** Where the song came from: the project's music/ folder or a file dropped in this session. */
-  origin: "folder" | "added";
+  /** Where the song came from: the music/ folder, a file dropped this session, the starter YouTube list, or a YouTube link the user added. */
+  origin: "folder" | "added" | "starter" | "link";
+  /** Local files are decoded and analysed; YouTube songs are synced by tapping. */
+  kind: "file" | "youtube";
+  /** YouTube only. */
+  videoId?: string;
+  /** YouTube only: tempo after tap-to-sync, or null when not synced yet. */
+  syncedBpm?: number | null;
   state: SongState;
   analysis: AnalysisStatus;
   /** SHA-1 of the file's bytes, once read. */
@@ -38,6 +47,13 @@ export interface Library {
   addFiles(files: Iterable<File>): Song[];
   setState(id: string, state: SongState, duration?: number): void;
   setAnalysis(id: string, patch: Partial<AnalysisStatus>): void;
+  /** Add a YouTube video by ID (kept across reloads); returns the existing song if already listed. */
+  addYouTube(videoId: string): Song;
+  /** Remove a YouTube link the user added. */
+  removeYouTube(id: string): void;
+  /** Name a user-added YouTube song once its title is known. */
+  setTitle(id: string, title: string): void;
+  setSynced(id: string, bpm: number | null): void;
   subscribe(fn: () => void): () => void;
 }
 
@@ -61,8 +77,47 @@ function probeDuration(file: File): Promise<number | null> {
   });
 }
 
+const LINKS_KEY = "raasMandal.youtubeLinks.v1";
+const ytId = (videoId: string) => `yt:${videoId}`;
+
+function savedLinks(): { videoId: string; title: string }[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(LINKS_KEY) ?? "[]");
+    return Array.isArray(v) ? v.filter((x) => x && typeof x.videoId === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function youtubeSong(videoId: string, title: string, artist: string | null, origin: "starter" | "link"): Song {
+  return {
+    id: ytId(videoId),
+    title,
+    artist,
+    duration: null,
+    origin,
+    kind: "youtube",
+    videoId,
+    syncedBpm: (() => { const bpm = loadSync(videoId)?.bpm; return bpm ? Math.round(bpm) : null; })(),
+    state: "idle",
+    analysis: { ...NOT_ANALYSED },
+    read: () => Promise.reject(new Error("YouTube songs stream from YouTube")),
+  };
+}
+
 export function createLibrary(): Library {
-  const songs: Song[] = [];
+  // YouTube songs first come from the starter list and the user's saved links; files are added after.
+  const songs: Song[] = [
+    ...YOUTUBE_SONGS.map((y) => youtubeSong(y.videoId, y.title, y.artist, "starter")),
+    ...savedLinks().filter((l) => !YOUTUBE_SONGS.some((y) => y.videoId === l.videoId)).map((l) => youtubeSong(l.videoId, l.title, null, "link")),
+  ];
+  const persistLinks = () => {
+    try {
+      localStorage.setItem(LINKS_KEY, JSON.stringify(songs.filter((x) => x.origin === "link").map((x) => ({ videoId: x.videoId, title: x.title }))));
+    } catch {
+      // Storage unavailable: links last until reload.
+    }
+  };
   let hasManifest = false;
   const listeners = new Set<() => void>();
   const notify = () => listeners.forEach((l) => l());
@@ -86,6 +141,7 @@ export function createLibrary(): Library {
             artist: m.artist,
             duration: m.duration,
             origin: "folder",
+            kind: "file",
             state: "idle",
             analysis: { ...NOT_ANALYSED },
             read: async () => {
@@ -115,6 +171,7 @@ export function createLibrary(): Library {
           artist: null,
           duration: null,
           origin: "added",
+          kind: "file",
           state: "idle",
           analysis: { ...NOT_ANALYSED },
           read: () => file.arrayBuffer(),
@@ -139,6 +196,39 @@ export function createLibrary(): Library {
       const song = songs.find((s) => s.id === id);
       if (!song) return;
       song.analysis = { ...song.analysis, ...patch };
+      notify();
+    },
+
+    addYouTube(videoId) {
+      const existing = songs.find((x) => x.id === ytId(videoId));
+      if (existing) return existing;
+      const song = youtubeSong(videoId, "YouTube video", null, "link");
+      songs.push(song);
+      persistLinks();
+      notify();
+      return song;
+    },
+
+    removeYouTube(id) {
+      const i = songs.findIndex((x) => x.id === id && x.origin === "link");
+      if (i < 0) return;
+      songs.splice(i, 1);
+      persistLinks();
+      notify();
+    },
+
+    setTitle(id, title) {
+      const song = songs.find((x) => x.id === id);
+      if (!song || !title || song.title === title) return;
+      song.title = title;
+      if (song.origin === "link") persistLinks();
+      notify();
+    },
+
+    setSynced(id, bpm) {
+      const song = songs.find((x) => x.id === id);
+      if (!song) return;
+      song.syncedBpm = bpm;
       notify();
     },
 

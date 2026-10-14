@@ -1,6 +1,6 @@
 import { themeFor } from "../data/nights";
 import { STEPS } from "../data/steps";
-import { sequenceAt } from "../state/sequence";
+import { sequenceAt, swapsBefore } from "../state/sequence";
 import type { Scene } from "../state/types";
 import { rgba, shade } from "../util/color";
 import { TAU } from "../util/math";
@@ -138,6 +138,10 @@ export function createRenderer(canvas: HTMLCanvasElement, host: HTMLElement): Re
     const mirrorGlint = scene.print === "abhla" ? bump(beat, 0, 0.09) : null;
     const blend = pos?.prev && pos.beatInStep < BLEND_BEATS ? pos.beatInStep / BLEND_BEATS : 1;
 
+    // Partner swaps completed so far: when odd, partners stand in each other's places.
+    const swapped = stepBeat !== null && swapsBefore(scene.sequence, stepBeat) % 2 === 1;
+    const partnerSparks: [number, number, number][] = []; // x, y, strength
+
     scene.circles.forEach((circle, ri) => {
       const r = L.radii[ri], n = L.counts[ri];
       // Screen y points down, so anticlockwise is a decreasing angle.
@@ -146,24 +150,70 @@ export function createRenderer(canvas: HTMLCanvasElement, host: HTMLElement): Re
       speed[ri] += (target - speed[ri]) * Math.min(1, dt * SPEED_EASE);
       angle[ri] += speed[ri] * dt;
 
-      for (let j = 0; j < n; j++) {
-        let p = pose(pos?.step ?? null, pos?.beatInStep ?? 0, j);
-        if (blend < 1 && pos?.prev) p = blendPose(pose(pos.prev.step, pos.prev.lengthBeats, j), p, blend);
+      // Poses and positions per slot (a place on the circle).
+      const poses = Array.from({ length: n }, (_, slot) => {
+        const p = pose(pos?.step ?? null, pos?.beatInStep ?? 0, slot);
+        return blend < 1 && pos?.prev ? blendPose(pose(pos.prev.step, pos.prev.lengthBeats, slot), p, blend) : p;
+      });
+      const xy = poses.map((p, slot) => {
+        const th = angle[ri] + (slot / n) * TAU + (p.tang * s) / r;
+        const rad = r - L.gatherIn[ri] * p.gather + p.radial * s;
+        return [Math.cos(th) * rad, Math.sin(th) * rad];
+      });
+      // Partner swap: each pair (slots 2k, 2k+1) turns half a turn around the point between them.
+      const orbit = poses[0].orbit;
+      if (orbit) {
+        const c = Math.cos(orbit), sn = Math.sin(orbit);
+        for (let k = 0; k + 1 < n; k += 2) {
+          const mx = (xy[k][0] + xy[k + 1][0]) / 2, my = (xy[k][1] + xy[k + 1][1]) / 2;
+          for (const q of [k, k + 1]) {
+            const dx = xy[q][0] - mx, dy = xy[q][1] - my;
+            xy[q] = [mx + dx * c - dy * sn, my + dx * sn + dy * c];
+          }
+        }
+      }
 
-        const th = angle[ri] + (j / n) * TAU + (p.tang * s) / r;
-        const rad = r + p.radial * s;
-        const outfit = { ...outfits[(j + ri) % 3], mirrorGlint };
-        const isMan = circle.arrangement === "men" || (circle.arrangement === "alternate" && j % 2 === 1);
+      for (let slot = 0; slot < n; slot++) {
+        const p = poses[slot];
+        const [x, y] = xy[slot];
+        const who = swapped ? slot ^ 1 : slot; // which dancer stands here
+        const outfit = { ...outfits[(who + ri) % 3], mirrorGlint };
+        const isMan = circle.arrangement === "men" || (circle.arrangement === "alternate" && who % 2 === 1);
 
         ctx.save();
-        ctx.translate(Math.cos(th) * rad, Math.sin(th) * rad);
-        ctx.rotate(th + Math.PI / 2 + p.sway + p.selfRot);
-        if (p.squash !== 1) ctx.scale(1, p.squash);
+        ctx.translate(x, y);
+        ctx.rotate(Math.atan2(y, x) + Math.PI / 2 + p.sway + p.selfRot);
+        if (p.scale !== 1 || p.squash !== 1) ctx.scale(p.scale, p.scale * p.squash);
         if (isMan) drawMan(ctx, s, p, outfit);
         else drawWoman(ctx, s, p, outfit);
         ctx.restore();
       }
+
+      // Hudo: partners' palms meet between them.
+      const clap = poses[0].partnerClap;
+      if (clap > 0.3) {
+        for (let k = poses[0].pairOffset; k < n; k += 2) {
+          const a = xy[k], b = xy[(k + 1) % n];
+          partnerSparks.push([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, clap]);
+        }
+      }
     });
+
+    // Clap sparks last, over every dancer.
+    if (partnerSparks.length) {
+      ctx.lineWidth = 0.022 * s;
+      ctx.strokeStyle = `rgba(255,236,170,${Math.min(1, partnerSparks[0][2])})`;
+      ctx.beginPath();
+      for (const [x, y, k] of partnerSparks) {
+        const r0 = 0.04 * s, r1 = (0.04 + 0.09 * k) * s;
+        for (let i = 0; i < 6; i++) {
+          const an = (i / 6) * TAU;
+          ctx.moveTo(x + Math.cos(an) * r0, y + Math.sin(an) * r0);
+          ctx.lineTo(x + Math.cos(an) * r1, y + Math.sin(an) * r1);
+        }
+      }
+      ctx.stroke();
+    }
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }

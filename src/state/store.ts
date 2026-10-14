@@ -1,7 +1,7 @@
 import { CENTRE_IDS, DECOR_IDS } from "../data/festive";
 import { tonight } from "../data/nights";
 import { PRINT_IDS } from "../data/prints";
-import { DEFAULT_SEQUENCE, MAX_BARS, MIN_BARS, STEP_IDS } from "../data/steps";
+import { DEFAULT_SEQUENCE, LEGACY_STEP_IDS, MAX_BARS, MIN_BARS, STEP_IDS } from "../data/steps";
 import { clamp } from "../util/math";
 import type { Circle, Scene } from "./types";
 
@@ -42,6 +42,7 @@ function sanitize(raw: unknown): Scene {
   const circles = Array.isArray(r.circles) ? r.circles.filter(validCircle).slice(0, MAX_CIRCLES) : [];
   const sequence = Array.isArray(r.sequence)
     ? r.sequence
+        .map((s) => (s && LEGACY_STEP_IDS[s.step] ? { ...s, step: LEGACY_STEP_IDS[s.step] } : s))
         .filter((s) => s && STEP_IDS.includes(s.step) && Number.isFinite(s.bars))
         .map((s) => ({ step: s.step, bars: clamp(Math.round(s.bars), MIN_BARS, MAX_BARS) }))
     : d.sequence;

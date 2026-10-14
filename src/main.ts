@@ -5,7 +5,9 @@ import "./styles/play.css";
 
 import { createPreviewClock, createSongClock, type BeatClock } from "./audio/beatClock";
 import { createLibrary } from "./audio/library";
+import { createMedia } from "./audio/media";
 import { createPlayer } from "./audio/player";
+import { createYouTubePlayer } from "./audio/youtube";
 import { createSongSession } from "./audio/session";
 import { nightFor, themeFor } from "./data/nights";
 import { STEPS } from "./data/steps";
@@ -30,12 +32,15 @@ const store = createStore();
 const library = createLibrary();
 const player = createPlayer();
 const previewClock = createPreviewClock();
-const session = createSongSession(library, player);
-const songClock = createSongClock(player, () => session.grid());
+const youtube = createYouTubePlayer(byId("ytFrame"));
+/** Both song sources behind one interface: files (Web Audio) and YouTube (IFrame player). */
+const media = createMedia(player, youtube);
+const session = createSongSession(library, player, youtube, media);
+const songClock = createSongClock(media, () => session.grid());
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 /** One clock: the song's playback position (mapped to its detected beats) whenever a song is selected, else the preview tempo. */
-const songSelected = () => player.loaded || player.loading;
+const songSelected = () => media.loaded || media.loading;
 const clock = (): BeatClock => (songSelected() ? songClock : previewClock);
 
 // ---------- Panel ----------
@@ -46,7 +51,7 @@ mountCircles(panel, store);
 mountDirection(panel, store);
 mountArrangement(panel, store);
 mountCentre(panel, store);
-const music = mountMusic(panel, store, library, player, session);
+const music = mountMusic(panel, store, library, media, session);
 const steps = mountSteps(panel, store);
 
 store.watch(
@@ -109,7 +114,7 @@ const playPanel = mountPlayPanel(byId("playPanel"), {
   onTogglePause: togglePause,
   onRestart: restart,
   onExit: exitPlay,
-  onSeek: (t) => player.seek(t),
+  onSeek: (t) => media.seek(t),
 });
 
 function enterPlay() {
@@ -117,13 +122,14 @@ function enterPlay() {
   document.body.classList.add("playing");
   enterFullscreen();
   if (songSelected()) {
-    player.seek(0);
-    player.play();
+    media.seek(0);
+    media.play();
   } else {
     previewClock.restart();
     previewClock.resume();
   }
   playPanel.show();
+  requestAnimationFrame(placeYouTubeScreen);
   // The header's Play button is hidden now: keep keyboard focus in Play mode, on the panel itself.
   byId("playPanel").focus({ preventScroll: true });
   wake();
@@ -132,10 +138,11 @@ function enterPlay() {
 function exitPlay() {
   mode = "build";
   document.body.classList.remove("playing", "idle");
-  player.pause();
+  media.pause();
   previewClock.resume();
   if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
   playPanel.hide();
+  requestAnimationFrame(placeYouTubeScreen);
   byId("playBtn").focus();
 }
 
@@ -154,7 +161,7 @@ function restart() {
 }
 
 function seekBy(seconds: number) {
-  if (player.loaded) player.seek(player.currentTime() + seconds);
+  if (media.loaded) media.seek(media.currentTime() + seconds);
   wake();
 }
 
@@ -207,6 +214,38 @@ function wake() {
 }
 window.addEventListener("mousemove", () => { if (mode === "play") wake(); });
 
+// ---------- YouTube screen ----------
+// The YouTube player must stay visible while a YouTube song is active (YouTube's rules), and moving an
+// iframe in the page would reload it. So the screen stays put in the page and is positioned over a
+// corner of the stage in Build mode, or over its slot in the Play panel. It doesn't fade with the panel.
+const ytScreen = byId("ytScreen");
+const ytSlot = byId("playPanel").querySelector<HTMLElement>(".pp-video")!;
+function placeYouTubeScreen() {
+  const show = session.source === "youtube" && !session.error;
+  ytScreen.hidden = !show;
+  ytSlot.hidden = !(show && mode === "play");
+  if (!show) return;
+  let r: { left: number; top: number; width: number; height: number };
+  if (mode === "play") r = ytSlot.getBoundingClientRect();
+  else {
+    const stage = byId("stage").getBoundingClientRect();
+    const width = Math.min(320, stage.width * 0.32);
+    r = { left: stage.right - width - 16, top: stage.top + 14, width, height: (width * 9) / 16 };
+  }
+  Object.assign(ytScreen.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+}
+session.subscribe(placeYouTubeScreen);
+window.addEventListener("resize", placeYouTubeScreen);
+new ResizeObserver(placeYouTubeScreen).observe(byId("stage"));
+new ResizeObserver(placeYouTubeScreen).observe(byId("playPanel"));
+
+// T taps the beat in either mode: tap-to-sync for YouTube songs, tap to correct for analysed files.
+document.addEventListener("keydown", (e) => {
+  if ((e.key !== "t" && e.key !== "T") || e.metaKey || e.ctrlKey || e.altKey) return;
+  if ((e.target as HTMLElement).closest("input, textarea, select")) return;
+  music.tap();
+});
+
 // ---------- Frame loop ----------
 const renderer = createRenderer(byId<HTMLCanvasElement>("stageCanvas"), byId("stage"));
 const nowStep = byId("nowStep");
@@ -241,9 +280,9 @@ function tick() {
   steps.setCurrent(pos?.index ?? -1);
   music.tick();
   if (mode === "play") {
-    const song = player.loaded ? library.find(player.id) : undefined;
+    const song = media.loaded ? library.find(store.get().songId) : undefined;
     const waiting = stepBeat === null && sequence.length > 0;
-    playPanel.update(pos, c.paused, song ? { title: song.title, time: player.currentTime(), duration: player.duration } : null, waiting);
+    playPanel.update(pos, c.paused, song ? { title: song.title, time: media.currentTime(), duration: media.duration } : null, waiting);
   } else if ((pos?.step ?? null) !== shownStep) {
     shownStep = pos?.step ?? null;
     nowStep.innerHTML = pos ? `<span class="gu">${STEPS[pos.step].gu}</span><br><span class="en">${STEPS[pos.step].en} · ${STEPS[pos.step].feel}</span>` : "";

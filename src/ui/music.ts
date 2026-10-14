@@ -1,7 +1,9 @@
 import { NUDGE_MS, TAPS_NEEDED } from "../analysis/corrections";
 import { formatTime, type Library, type Song } from "../audio/library";
-import type { Player } from "../audio/player";
+import type { Playback } from "../audio/player";
 import { LOW_CONFIDENCE, type SongSession } from "../audio/session";
+import { MIN_TAPS } from "../audio/tapSync";
+import { parseYouTubeId } from "../audio/youtube";
 import type { Store } from "../state/store";
 import { el, rebuild, section } from "./dom";
 
@@ -10,6 +12,8 @@ export interface MusicPanel {
   addFiles(files: Iterable<File>): void;
   /** Per-frame update of the preview position. */
   tick(): void;
+  /** Tap the beat (button or T key): tap-to-sync for YouTube, tap to correct for analysed files. */
+  tap(): void;
 }
 
 const PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z" fill="currentColor"/></svg>';
@@ -17,6 +21,10 @@ const PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h3v12H4z
 
 function statusText(song: Song): string {
   if (song.state === "loading") return "Loading…";
+  if (song.kind === "youtube") {
+    if (song.state === "error") return "Can't play here";
+    return song.syncedBpm ? `Synced · ${song.syncedBpm} bpm` : "Not synced yet";
+  }
   if (song.state === "error") return "Couldn't play this file";
   const a = song.analysis;
   if (a.state === "analysing") return `Analysing ${Math.round(a.progress * 100)}%`;
@@ -27,8 +35,32 @@ function statusText(song: Song): string {
 
 const signedMs = (ms: number) => (ms > 0 ? `+${ms} ms` : ms < 0 ? `−${-ms} ms` : "0 ms");
 
-export function mountMusic(panel: HTMLElement, store: Store, library: Library, player: Player, session: SongSession): MusicPanel {
+export function mountMusic(panel: HTMLElement, store: Store, library: Library, player: Playback, session: SongSession): MusicPanel {
   const sec = section("સંગીત", "Music");
+
+  // Add a YouTube song by link (any YouTube URL format, or a bare video ID).
+  const ytForm = el(
+    "form",
+    { class: "yt-add" },
+    `<label class="sr-only" for="ytLink">YouTube link</label>
+     <input id="ytLink" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Paste a YouTube link">
+     <button type="submit" class="ghost">Add YouTube link</button>`,
+  );
+  const ytInput = ytForm.querySelector("input")!;
+  ytForm.onsubmit = (e) => {
+    e.preventDefault();
+    const id = parseYouTubeId(ytInput.value);
+    if (!id) {
+      showMessage(ytInput.value.trim()
+        ? "That doesn't look like a YouTube link. Copy the video's address (for example https://www.youtube.com/watch?v=… or https://youtu.be/…) and paste it here."
+        : "Paste a YouTube link first.");
+      return;
+    }
+    showMessage("");
+    ytInput.value = "";
+    const song = library.addYouTube(id);
+    store.update((d) => { d.songId = song.id; });
+  };
 
   const input = el("input", { type: "file", accept: "audio/*,.mp3,.m4a,.wav,.ogg", multiple: "", hidden: "" });
   const drop = el("div", { class: "drop" }, `<span>Drop songs here, or</span> <button type="button" class="ghost">Choose files</button>`);
@@ -40,6 +72,7 @@ export function mountMusic(panel: HTMLElement, store: Store, library: Library, p
   };
 
   const msg = el("p", { class: "msg", role: "status" });
+  const songError = el("p", { class: "msg err", role: "alert" });
   const list = el("ul", { class: "songs", "aria-label": "Songs" });
   const note = el("p", { class: "note" });
 
@@ -91,16 +124,21 @@ export function mountMusic(panel: HTMLElement, store: Store, library: Library, p
   fixBtn("half").onclick = () => session.halve();
   fixBtn("double").onclick = () => session.double();
   fixBtn("reset").onclick = () => { hintText = ""; session.resetCorrections(); };
-  fixBtn("tap").onclick = () => {
+  function tap() {
     const r = session.tap();
+    const yt = session.source === "youtube";
     hintText =
-      r === "need-playing" ? "Play the song first, then tap this button on every beat."
-      : r === "applied" ? "Beats re-fitted to your taps."
+      r === "need-playing" ? "Play the song first, then tap on every beat."
+      : r === "applied" ? (yt ? "Synced to your taps. Keep tapping to refine, or nudge below." : "Beats re-fitted to your taps.")
       : "";
     renderFix();
-  };
+  }
+  fixBtn("tap").onclick = tap;
 
   function renderFix() {
+    songError.textContent = session.error ?? "";
+    if (session.source === "youtube") return renderYouTubeFix();
+    fixBtn("tap").classList.remove("yt");
     const map = session.map;
     const grid = session.grid();
     fix.hidden = !map || !grid;
@@ -116,10 +154,29 @@ export function mountMusic(panel: HTMLElement, store: Store, library: Library, p
     fixBtn("tap").textContent = n ? `Tap ${n} / ${TAPS_NEEDED}` : "Tap to correct";
     hint.textContent = n ? "Keep tapping on every beat…" : hintText || `Tap ${TAPS_NEEDED} beats while the song plays to re-fit the beat.`;
   }
+
+  /** YouTube: its audio can't be analysed, so the beat comes from tapping along (tap-to-sync). */
+  function renderYouTubeFix() {
+    fix.hidden = !!session.error;
+    if (session.error) return;
+    const sync = session.sync;
+    warn.hidden = true;
+    offsetOut.textContent = signedMs(sync?.nudgeMs ?? 0);
+    bpmOut.textContent = sync ? `${Math.round(sync.bpm)} bpm` : "120 bpm";
+    for (const a of ["earlier", "later", "half", "double", "reset"]) fixBtn(a).disabled = !sync;
+    const n = session.tapCount;
+    fixBtn("tap").classList.add("yt");
+    fixBtn("tap").textContent = n && n < MIN_TAPS ? `Tap beat · ${n} / ${MIN_TAPS}` : "Tap beat";
+    hint.textContent =
+      n && n < MIN_TAPS ? "Keep tapping on every beat…"
+      : hintText || (sync
+        ? `Synced at ${Math.round(sync.bpm)} bpm. Tap again any time to refine, or nudge.`
+        : `Not synced yet: dancers keep a steady 120 bpm. Play the song, then tap on every beat (button or T key), starting on beat 1 of a bar. After ${MIN_TAPS} taps they lock on.`);
+  }
   session.subscribe(renderFix);
   player.subscribe(renderFix);
 
-  sec.append(drop, msg, list, preview, fix, note);
+  sec.append(drop, ytForm, msg, list, songError, preview, fix, note);
   panel.append(sec);
 
   function showMessage(text: string) {
@@ -148,14 +205,22 @@ export function mountMusic(panel: HTMLElement, store: Store, library: Library, p
         const b = el(
           "button",
           { type: "button", class: `song${song.state === "error" ? " err" : ""}`, "aria-pressed": String(song.id === current), "data-focus": `song-${song.id}` },
-          `<span class="t"></span><span class="s"></span>`,
+          `<span class="t"><span class="badge ${song.kind}">${song.kind === "youtube" ? "YouTube" : "File"}</span><span class="tt"></span></span><span class="s"></span>`,
         );
-        // Titles come from file tags and names: set as text, never HTML.
-        b.querySelector(".t")!.textContent = song.title;
-        b.querySelector(".s")!.textContent = song.origin === "added" ? `${meta} · added` : meta;
+        // Titles come from file tags, file names and YouTube: set as text, never HTML.
+        b.querySelector(".tt")!.textContent = song.title;
+        b.querySelector(".s")!.textContent = song.origin === "added" || song.origin === "link" ? `${meta} · added` : meta;
         b.onclick = () => store.update((d) => { d.songId = song.id; });
         const li = el("li");
         li.append(b);
+        if (song.origin === "link") {
+          const rm = el("button", { type: "button", class: "song-rm", "aria-label": `Remove ${song.title}`, title: "Remove this link", "data-focus": `rm-${song.id}` }, "×");
+          rm.onclick = () => {
+            if (store.get().songId === song.id) store.update((d) => { d.songId = null; });
+            library.removeYouTube(song.id);
+          };
+          li.append(rm);
+        }
         list.append(li);
       }
     });
@@ -166,7 +231,7 @@ export function mountMusic(panel: HTMLElement, store: Store, library: Library, p
         ? "The <code>music/</code> folder has no songs yet. Add files there and run <code>npm run music</code>, or drop songs above."
         : "Drop your own songs above. When running locally, <code>npm run music</code> lists the songs in <code>music/</code>.";
     } else {
-      note.textContent = "Selecting a song analyses its beats once; the result is saved. Songs you drop in stay until you reload the page.";
+      note.textContent = "Song files are analysed once for their beats and the result is saved; files you drop in stay until you reload. YouTube songs are synced by tapping along, and the sync is saved for each video.";
     }
 
     const song = library.find(current);
@@ -183,6 +248,7 @@ export function mountMusic(panel: HTMLElement, store: Store, library: Library, p
 
   return {
     addFiles,
+    tap,
     tick() {
       if (preview.hidden) return;
       const d = player.duration;

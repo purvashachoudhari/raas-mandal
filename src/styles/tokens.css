@@ -65,7 +65,7 @@ button {
 /* Laptop only (§6): below 1024 px wide, show a friendly message instead of the app. */
 .narrow { display: none; }
 @media (max-width: 1023.98px) {
-  .app, .play-panel { display: none !important; }
+  .app, .play-panel, .yt-screen { display: none !important; }
   body { overflow: auto; }
   .narrow {
     display: grid; place-items: center; min-height: 100%; box-sizing: border-box; padding: 32px 24px;

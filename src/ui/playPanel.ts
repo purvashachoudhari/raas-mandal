@@ -34,6 +34,7 @@ export function mountPlayPanel(panel: HTMLElement, handlers: PlayPanelHandlers):
   panel.innerHTML = `
     <div class="pp-step" aria-live="polite"></div>
     <ol class="pp-seq" aria-label="Step sequence"></ol>
+    <div class="pp-video" hidden aria-hidden="true"></div>
     <div class="pp-song" hidden>
       <div class="pp-title"></div>
       <div class="time"><span data-t="now">0:00</span> / <span data-t="total">0:00</span></div>

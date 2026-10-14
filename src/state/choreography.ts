@@ -2,19 +2,21 @@ import type { BeatGrid } from "../analysis/corrections";
 import { BEATS_PER_BAR, MAX_BARS } from "../data/steps";
 import type { BeatMap, SequenceItem, StepId } from "./types";
 
-// Auto choreography (§5.9): pick steps from the song's energy curve. Calm sections get Hinch and
-// Be Taali, high-energy sections Dodhiyu and Dandiya, with a Fudardi at each section change.
+// Auto choreography (§5.9): pick steps from the song's energy curve. Each energy level has three
+// steps that take turns; a section change opens with Fudardi or Into the centre & out (alternating);
+// every 8 bars at one level end with a Partner swap.
 
 /** Songs move in 4-bar phrases; the energy level is decided per phrase. */
 const PHRASE_BARS = 4;
 
 type Level = 0 | 1 | 2; // calm, medium, high
 
-const STEPS_FOR: Record<Level, [StepId, StepId]> = {
-  0: ["hinch", "be"],
-  1: ["be", "tran"],
-  2: ["dodhiyu", "dandiya"],
+const STEPS_FOR: Record<Level, readonly [StepId, StepId, StepId]> = {
+  0: ["hinch", "beTaali", "popatiyu"],
+  1: ["tranTaali", "hudo", "tippani"],
+  2: ["dodhiyu", "sanedo", "dandiya"],
 };
+const SECTION_OPENERS: readonly SequenceItem[] = [{ step: "fudardi", bars: 1 }, { step: "centreInOut", bars: 2 }];
 
 function nearestIndex(times: number[], t: number): number {
   let lo = 0, hi = times.length - 1;
@@ -68,22 +70,32 @@ export function autoSequence(bars: number[]): SequenceItem[] {
     if (levels[i - 1] === levels[i + 1] && levels[i] !== levels[i - 1]) levels[i] = levels[i - 1];
   }
 
-  // 4. Steps: two per phrase, alternating within a section; a Fudardi opens each new section.
+  // 4. Steps: two per phrase, rotating through the level's three steps. A new section opens with
+  //    Fudardi or Into the centre & out (taking turns); every second phrase in a section (8 bars at
+  //    one level) ends with a Partner swap.
   const items: SequenceItem[] = [];
-  let inSection = 0;
+  let inSection = 0, openers = 0, rotation = 0;
   phrases.forEach((p, i) => {
     const level = levels[i];
     const change = i > 0 && level !== levels[i - 1];
     inSection = change ? 0 : inSection + (i > 0 ? 1 : 0);
     let remaining = p.bars;
-    if (change && remaining > 1) {
-      items.push({ step: "fudardi", bars: 1 });
-      remaining--;
+    if (change) {
+      const opener = SECTION_OPENERS[openers++ % SECTION_OPENERS.length];
+      if (remaining > opener.bars) {
+        items.push({ ...opener });
+        remaining -= opener.bars;
+      }
     }
-    const [a, b] = inSection % 2 ? [STEPS_FOR[level][1], STEPS_FOR[level][0]] : STEPS_FOR[level];
+    const swap = inSection % 2 === 1 && remaining > 1;
+    if (swap) remaining--;
+    const steps = STEPS_FOR[level];
+    const a = steps[rotation % 3], b = steps[(rotation + 1) % 3];
+    rotation++;
     const first = Math.ceil(remaining / 2);
     items.push({ step: a, bars: first });
     if (remaining - first > 0) items.push({ step: b, bars: remaining - first });
+    if (swap) items.push({ step: "partnerSwap", bars: 1 });
   });
 
   // 5. Merge neighbours that ended up the same step.
