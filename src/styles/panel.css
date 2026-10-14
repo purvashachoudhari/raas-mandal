@@ -7,8 +7,14 @@
 .brand .gu { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: 1; letter-spacing: .01em; color: var(--accent); }
 .brand .en { font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
 .top .spacer { flex: 1; }
-.tonight { font-size: 14px; color: var(--muted); }
-.tonight b { color: var(--ink); font-weight: 600; }
+/* Language toggle: EN | ગુ */
+.lang { display: inline-flex; align-items: center; gap: 2px; font-size: 13px; color: var(--muted); }
+.lang button {
+  background: none; border: 0; border-radius: 6px; padding: 4px 7px 3px; font-size: 13px; font-weight: 600; color: var(--muted);
+}
+.lang button[lang="gu"] { font-family: var(--display); font-size: 15px; padding-block: 2px 1px; }
+.lang button:hover { color: var(--ink); }
+.lang button[aria-pressed="true"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); border-radius: 0; }
 .play-btn {
   display: inline-flex; align-items: center; gap: 10px;
   background: var(--accent); color: var(--accent-ink); border: 0;
@@ -26,9 +32,7 @@
 }
 .sec { padding-block: 18px; border-bottom: 1px solid var(--line); display: grid; gap: 12px; }
 .sec:last-child { border-bottom: 0; }
-.sec-h { display: flex; align-items: baseline; gap: 10px; margin: 0; font-weight: normal; }
-.sec-h .gu { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1; }
-.sec-h .en { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.sec-h { margin: 0; font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1; }
 .note { font-size: 13px; color: var(--muted); margin: 0; }
 .row { display: flex; align-items: center; gap: 10px; }
 .grow { flex: 1; min-width: 0; }
@@ -57,10 +61,8 @@
   padding: 4px 4px 6px; display: grid; justify-items: center; gap: 2px; line-height: 1.1;
 }
 .print canvas { width: 100%; height: 40px; border-radius: 7px; display: block; margin-bottom: 4px; }
-.print .gu { font-family: var(--display); font-weight: 700; font-size: 14px; }
-.print .en { font-size: 11px; color: var(--muted); }
+.print .nm { font-family: var(--display); font-weight: 700; font-size: 13.5px; text-align: center; }
 .print[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.print[aria-pressed="true"] .en { color: var(--ink); }
 
 /* Segmented controls */
 .seg { display: flex; background: var(--chip); border-radius: 10px; padding: 3px; gap: 3px; }
@@ -90,10 +92,8 @@
   border: 1px solid var(--line); background: var(--chip); border-radius: 10px;
   padding: 8px 4px 6px; display: grid; justify-items: center; gap: 2px; line-height: 1.1;
 }
-.centre .gu { font-family: var(--display); font-weight: 700; font-size: 15px; }
-.centre .en { font-size: 11px; color: var(--muted); }
+.centre .nm { font-family: var(--display); font-weight: 700; font-size: 13.5px; text-align: center; }
 .centre[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.centre[aria-pressed="true"] .en { color: var(--ink); }
 
 /* Steps */
 .lib { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -101,27 +101,36 @@
   border: 1px dashed var(--muted); background: none; border-radius: 999px;
   padding: 4px 11px 2px; font-size: 13px; display: inline-flex; gap: 6px; align-items: baseline;
 }
-.lib button .gu { font-family: var(--display); font-weight: 700; }
+.lib button .main { font-family: var(--display); font-weight: 700; }
 .lib button:hover { border-style: solid; border-color: var(--accent); }
-.seq { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.seq { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; position: relative; }
 .seq li {
-  display: grid; grid-template-columns: 22px 1fr auto auto; align-items: center; gap: 8px;
-  background: var(--chip); border-radius: 10px; padding: 6px 6px 6px 10px;
+  display: grid; grid-template-columns: auto 18px 1fr auto auto; align-items: center; gap: 6px;
+  background: var(--chip); border-radius: 10px; padding: 6px 6px 6px 2px;
 }
 .seq li.now { box-shadow: inset 3px 0 0 var(--accent); }
 .seq li.empty { display: block; background: none; font-size: 13px; color: var(--muted); padding: 10px; border: 1px dashed var(--line); }
 .seq .n { font-family: var(--display); font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
 .seq .nm { min-width: 0; line-height: 1.15; }
-.seq .nm .gu { font-family: var(--display); font-weight: 700; font-size: 16px; }
-.seq .nm .en { font-size: 12px; color: var(--muted); }
+.seq .nm .main { font-family: var(--display); font-weight: 700; font-size: 16px; }
+.seq .nm .sub { font-size: 12px; color: var(--muted); }
+/* Reordering: drag a row by its handle (or Alt+↑ / Alt+↓); a line shows where it will land. */
+.seq .handle {
+  width: 22px; height: 32px; border: 0; border-radius: 6px; background: none; padding: 0;
+  font-size: 13px; letter-spacing: -3px; color: var(--muted); cursor: grab; touch-action: none;
+}
+.seq .handle:hover { background: var(--chip); color: var(--ink); }
+.seq.reordering, .seq.reordering * { cursor: grabbing !important; user-select: none; }
+.seq li.dragging { opacity: .45; box-shadow: inset 0 0 0 1px var(--accent); }
+.drop-line { position: absolute; left: 0; right: 0; height: 3px; margin-top: -1.5px; border-radius: 2px; background: var(--accent); pointer-events: none; }
+.drop-line[hidden] { display: none; }
 .bars { display: inline-flex; align-items: center; gap: 2px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .bars span { min-width: 44px; text-align: center; }
-.bars button, .ops button {
+.bars button, .seq .del {
   width: 26px; height: 26px; border: 0; border-radius: 6px; background: none; font-size: 15px; line-height: 1;
 }
-.bars button:hover, .ops button:hover { background: var(--chip); }
-.ops { display: inline-flex; }
-.bars button:disabled, .ops button:disabled { opacity: .25; cursor: default; }
+.bars button:hover, .seq .del:hover { background: var(--chip); }
+.bars button:disabled { opacity: .25; cursor: default; }
 
 /* Music */
 .drop {

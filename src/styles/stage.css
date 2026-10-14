@@ -5,8 +5,8 @@
   color: var(--muted); pointer-events: none;
 }
 .now-step { position: absolute; left: 16px; bottom: 14px; pointer-events: none; line-height: 1.1; }
-.now-step .gu { font-family: var(--display); font-weight: 800; font-size: 26px; }
-.now-step .en { font-size: 13px; color: var(--muted); }
+.now-step .main { font-family: var(--display); font-weight: 800; font-size: 26px; }
+.now-step .sub { font-size: 13px; color: var(--muted); }
 /* Short message over the stage (e.g. Play garba with no song selected). */
 .stage-msg {
   position: absolute; left: 50%; top: 14px; transform: translate(-50%, -6px); max-width: calc(100% - 32px);

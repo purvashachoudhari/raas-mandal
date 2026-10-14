@@ -18,9 +18,11 @@
       <header class="top">
         <div class="brand"><span class="gu">રાસ મંડળ</span><span class="en">Raas Mandal</span></div>
         <div class="spacer"></div>
-        <div class="tonight" id="tonight"></div>
+        <div class="lang" id="langToggle" role="group" aria-label="Language">
+          <button type="button" data-lang="en" lang="en" aria-pressed="true">EN</button><span aria-hidden="true">|</span><button type="button" data-lang="gu" lang="gu" aria-pressed="false">ગુ</button>
+        </div>
         <button class="play-btn" id="playBtn" type="button">
-          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1l11 6-11 6z" fill="currentColor" /></svg>Play garba
+          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 1l11 6-11 6z" fill="currentColor" /></svg><span id="playLabel">Play garba</span>
         </button>
       </header>
 
@@ -28,7 +30,7 @@
         <aside class="panel" id="panel" aria-label="Build your garba"></aside>
         <section class="stage" id="stage">
           <canvas id="stageCanvas" role="img" aria-label="Animated garba circles"></canvas>
-          <div class="stage-tag">Preview</div>
+          <div class="stage-tag" id="stageTag">Preview</div>
           <div class="now-step" id="nowStep"></div>
           <div class="stage-msg" id="stageMsg" role="status"></div>
         </section>
@@ -44,8 +46,8 @@
     <div class="narrow" role="note">
       <div>
         <p class="gu">રાસ મંડળ</p>
-        <h1>Open Raas Mandal on a laptop</h1>
-        <p>The garba ground needs a wider screen. Open this page on a laptop or desktop, or make the window at least 1024 pixels wide.</p>
+        <h1 id="narrowTitle">Open Raas Mandal on a laptop</h1>
+        <p id="narrowBody">The garba ground needs a wider screen. Open this page on a laptop or desktop, or make the window at least 1024 pixels wide.</p>
       </div>
     </div>
 

@@ -1,3 +1,6 @@
+import type { Strings } from "../data/strings";
+import { localized, t } from "./i18n";
+
 export function byId<T extends HTMLElement = HTMLElement>(id: string): T {
   const node = document.getElementById(id);
   if (!node) throw new Error(`Missing #${id}`);
@@ -15,9 +18,13 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-/** A panel section with a Gujarati + English header. */
-export function section(gu: string, en: string): HTMLElement {
-  return el("section", { class: "sec" }, `<h2 class="sec-h"><span class="gu">${gu}</span><span class="en">${en}</span></h2>`);
+/** A panel section with a header in the current language. */
+export function section(title: (s: Strings) => string): HTMLElement {
+  const sec = el("section", { class: "sec" });
+  const h = el("h2", { class: "sec-h" });
+  localized(() => { h.textContent = title(t()); });
+  sec.append(h);
+  return sec;
 }
 
 /**
@@ -50,12 +57,13 @@ export function segmented<V extends string>(
   return group;
 }
 
-const RING_NAMES = ["Inner", "Second", "Third", "Fourth", "Outer"];
+const RINGS = ["inner", "second", "third", "fourth", "outer"] as const;
 
 export function circleLabel(index: number, count: number): string {
-  if (count === 1) return "Circle";
-  if (index === count - 1) return "Outer";
-  return RING_NAMES[index];
+  const r = t().rings;
+  if (count === 1) return r.single;
+  if (index === count - 1) return r.outer;
+  return r[RINGS[index]];
 }
 
 /** Scroll a list so one of its items is visible, without scrolling any ancestor (unlike scrollIntoView). */

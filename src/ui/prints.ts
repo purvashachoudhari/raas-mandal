@@ -1,10 +1,11 @@
 import { themeFor } from "../data/nights";
-import { PRINTS } from "../data/prints";
+import { PRINT_IDS } from "../data/prints";
 import { TILES, printColours } from "../stage/patterns";
 import type { Store } from "../state/store";
 import type { NightTheme } from "../data/nights";
 import type { PrintId } from "../state/types";
 import { el, rebuild, section } from "./dom";
+import { t, watchLocalized } from "./i18n";
 
 /** Swatch tile size in CSS px: larger than on dancers so the motif is easy to read. */
 const SWATCH_TILE = 26;
@@ -22,31 +23,33 @@ function paintSwatch(canvas: HTMLCanvasElement, print: PrintId, theme: NightThem
 }
 
 export function mountPrints(panel: HTMLElement, store: Store) {
-  const sec = section("છાપ", "Print");
-  const grid = el("div", { class: "prints", role: "group", "aria-label": "Print for all dancers" });
+  const sec = section((s) => s.printTitle);
+  const grid = el("div", { class: "prints", role: "group" });
   const info = el("p", { class: "note" });
   sec.append(grid, info);
   panel.append(sec);
 
-  store.watch(
+  watchLocalized(
+    store,
     (s) => [s.night, s.print] as const,
     ([night, current]) => {
       const theme = themeFor(night);
+      const s = t();
+      grid.setAttribute("aria-label", s.printGroupAria);
       rebuild(grid, () => {
-        for (const p of PRINTS) {
+        for (const id of PRINT_IDS) {
           const b = el(
             "button",
-            { class: "print", type: "button", "aria-pressed": String(p.id === current), "data-focus": `print-${p.id}` },
-            `<canvas aria-hidden="true"></canvas><span class="gu">${p.gu}</span><span class="en">${p.en}</span>`,
+            { class: "print", type: "button", "aria-pressed": String(id === current), "data-focus": `print-${id}` },
+            `<canvas aria-hidden="true"></canvas><span class="nm">${s.prints[id].name}</span>`,
           );
-          b.onclick = () => store.update((d) => { d.print = p.id; });
+          b.onclick = () => store.update((d) => { d.print = id; });
           grid.append(b);
         }
       });
       // Paint after layout so the canvases know their size.
-      grid.querySelectorAll("canvas").forEach((c, i) => paintSwatch(c, PRINTS[i].id, theme));
-      const sel = PRINTS.find((p) => p.id === current)!;
-      info.textContent = `${sel.en} from ${sel.origin}, on every dancer.`;
+      grid.querySelectorAll("canvas").forEach((c, i) => paintSwatch(c, PRINT_IDS[i], theme));
+      info.textContent = s.prints[current].about;
     },
   );
 }

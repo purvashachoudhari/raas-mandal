@@ -39,6 +39,8 @@ Two modes:
 1. **Build mode.** Left panel of controls, live preview of the garba ground on the right. Every change shows immediately in the preview. The dancers stand still until a song plays (§5.12).
 2. **Play mode.** The ground goes full screen, the selected song plays, and the dancers follow the beat. A translucent control panel docked on the left shows the current step and song progress, and fades away while you watch.
 
+The header holds the logo, the **EN | ગુ** language toggle (§5.13) and the **Play garba** button. The selected night is shown only in the panel's Night section, not in the header.
+
 **Primary flow**
 1. Open the app. It opens on tonight's Navratri night (by date), or Night 1 outside the festival.
 2. Adjust the scene top to bottom in the left panel (order in §5).
@@ -54,7 +56,7 @@ The left panel follows this order, top to bottom. Priorities: **P0** must ship, 
 
 ### 5.1 Night colours (P0)
 
-- Nine swatches for the nine nights, showing night number and colour name; selected night shows its devi and date.
+- Nine swatches for the nine nights, showing night number and colour name; selected night shows its devi and date below the swatches.
 - **Dancers wear the night's colour.** The **background is a deep complementary colour** so the dancers stand out.
 - Each night defines: dancer base colour, two tonal variants (lighter and darker) so a full circle doesn't read as a flat block, an accent for trims, prints and UI highlights, and a background with a lighter centre glow.
 - The UI panel, buttons and text are themed from the same tokens.
@@ -90,6 +92,7 @@ One print applies to **all dancers, men and women alike**. Prints render in the 
 
 - Garments: women wear chaniya choli with a flared ghagra and dupatta; men wear a flared kediyu with churidar and pagdi. The print covers the ghagra and kediyu; trims, choli and pagdi use the accent.
 - Each print is a procedural pattern tile generated in code (no image assets), cached per print × colour × scale.
+- The selected print's origin shows under the swatches (for example "Bandhani from Kutch, Jamnagar.").
 - **Acceptance:** each print is recognisable at the smallest dancer size (5 circles); switching prints updates all dancers immediately.
 
 ### 5.3 Number of circles (P0)
@@ -138,6 +141,8 @@ Two song sources share one song list: **local files** and **YouTube**. Each song
 - Playback uses the **YouTube IFrame Player API** (privacy-enhanced `youtube-nocookie.com` host). YouTube requires the player to stay visible, so it never sits over the garba ground. In Build mode it has one fixed spot in the Music section: a **Now playing** box between the Add YouTube link box and the song list, showing the song title and the player at full panel width and 16:9 (at least 200 px tall). The box stays in that place whichever song is selected and scrolls with the panel like any other content. In Play mode it sits in the bottom-right corner at 356×200 px with a 16 px margin, and the ground (edge lights included) keeps at least 12 px clear of it: the ground moves left first, as far as its margin allows, and shrinks only if that isn't enough. It stays visible when the Play panel auto-hides. Switching modes only repositions it; the video doesn't reload. Only YouTube songs show the player; local files don't.
 - Status: *Not synced yet* or *Synced · 124 bpm* (see §5.8), *Loading…*, or *Can't play here*.
 - Errors: if a video blocks embedding (error 101, 150 or 153) the app shows "This video's owner doesn't allow it to play on other sites. Try a different upload." Unavailable videos and YouTube failing to load get their own messages.
+
+- The Music section has no general explanation paragraph; only the empty-list hint (how to add songs) remains.
 
 **Both sources**
 - Selecting a song makes it the active song (only one at a time): a local file starts analysis if needed; a YouTube video is cued.
@@ -195,7 +200,8 @@ A preset library of ten steps and two whole-circle formations. The user arranges
 - Hudo and Partner swap need an even dancer count per circle, which the layout already guarantees (§5.3).
 - Props: Dandiya sticks and the tippani appear only while their step is active, then disappear.
 - Each circle's swap offset is the number of partner swaps completed so far, derived from the sequence position, so it stays correct through loops and after scrubbing.
-- Sequence editor: the step library is split into **Steps** and **Formations** groups; both add into the **same sequence**, so a formation can sit between steps (for example Be Taali 2 bars → Into the centre & out → Dodhiyu 4 bars). Reorder, remove, and set length in bars (1 to 16; formations longer than one bar change length in whole repeats).
+- Sequence editor: the step library is split into **Steps** and **Formations** groups; both add into the **same sequence**, so a formation can sit between steps (for example Be Taali 2 bars → Into the centre & out → Dodhiyu 4 bars). Remove, set length in bars (1 to 16; formations longer than one bar change length in whole repeats), and **reorder by drag and drop**: each row has a drag handle (⋮⋮); the dragged row dims in place and an accent line shows where it will drop; Esc cancels the drag. For keyboard users, Alt+↑ / Alt+↓ moves the focused row (focus stays on the moved row and screen readers hear its new position).
+- The Steps section carries no helper text: no explanation of how the sequence works, and none of Auto's fallback (Auto with no analysed song simply shows the manual sequence, which is what plays). With an auto plan, one line says how steps follow the song's energy.
 - Default sequence: Be Taali 2 bars → Tran Taali 2 → Hinch 2 → Dodhiyu 4 → Fudardi 1 → Dandiya 2.
 - **Auto choreography (P1):** picks steps from the song's energy curve:
   - Low energy: Hinch, Be Taali, Popatiyu
@@ -210,7 +216,7 @@ A preset library of ten steps and two whole-circle formations. The user arranges
 - Full-screen stage (Fullscreen API, with graceful fallback).
 - **Ground fit:** the whole garba ground, including the outer edge lights, fits inside the screen with a 4% margin (of the screen's shorter side) on every side, centred both ways. It is sized to the full screen, not reduced by the controls, and recalculated on window resize and when entering or leaving full screen. Nothing is clipped at 1280×720, 1440×900 or 1920×1080.
 - **Control panel:** a vertical panel about 240 px wide, docked on the left with a translucent background, overlaying the stage. Top to bottom:
-  1. Current step (Gujarati large, English small).
+  1. Current step (name large, its feel small, in the chosen language).
   2. Sequence progress as stacked segments, one per step, each filling as it is danced; the current step is highlighted.
   3. Song title and time (elapsed / total).
   4. Song scrubber.
@@ -235,13 +241,22 @@ The dancers only dance while a song is actually playing.
 - **Beat-driven effects** (edge lights chasing, centre twinkles, garbo glow pulses, abhla mirror glints, dhol strikes, slowly turning centrepieces) only animate while the song plays, and freeze with the dancers. Diya and lamp flames keep a gentle flicker at rest.
 - **Play garba with no song selected:** shows a short message over the stage, "Pick a song to start the garba", and doesn't enter Play mode or start the dancers.
 
+### 5.13 Language (P0)
+
+- A small **EN | ગુ** toggle sits beside the **Play garba** button. English is the default.
+- The UI shows **one language at a time**. In English mode every label, section title, step name, button, status, hint, error and message is English; in Gujarati mode all of them are Gujarati. This includes accessible names and tooltips. Song titles, artists, "YouTube", units (bpm, ms) and key names (Esc, Space, Alt) stay as they are.
+- Only the logo (રાસ મંડળ · Raas Mandal) stays bilingual.
+- Switching re-renders the text in place: the scene, the song and the dance carry on.
+- The choice is kept in `localStorage` and restored on reload; the page's `lang` attribute follows it.
+- All UI text lives in one file, `src/data/strings.ts`, with an English and a Gujarati table of identical keys (TypeScript flags a missing translation). Data files hold only ids, colours and timing.
+
 ---
 
 ## 6. Visual design
 
 - **Look:** flat folk-art illustration seen from above. Dancers face the centre, heads outward, arms raised.
-- **Typography:** Baloo Bhai 2 (display, Gujarati and Latin) and Hind Vadodara (body). Gujarati title first, English subtitle second throughout.
-- **Panel:** 400 px fixed left column, section headers in Gujarati + English small caps, themed from the night tokens.
+- **Typography:** Baloo Bhai 2 (display, Gujarati and Latin) and Hind Vadodara (body). Text is in one language at a time (§5.13), never Gujarati and English side by side; only the logo is bilingual.
+- **Panel:** 400 px fixed left column, section headers in the chosen language, themed from the night tokens. No helper paragraphs beyond what a control needs (for example the beat-correction hints).
 - **Stage:** background colour with a soft centre glow, faint guide circles, a ring of edge lights that chase on the beat.
 - **Motion:** everything that pulses (garbo holes, lights, clap sparks, mirror glints) is driven by the beat clock, never by wall-clock timers.
 - **Laptop only:** designed for 1280×720 and up. Below 1024 px wide, show a friendly "Open Raas Mandal on a laptop" screen.
@@ -266,8 +281,9 @@ raas-mandal/
     │   ├── prints.ts         # print metadata
     │   ├── steps.ts          # §5.9 table
     │   ├── festive.ts        # centre + between-circle elements
+    │   ├── strings.ts        # every UI string, English and Gujarati (§5.13)
     │   └── youtubeSongs.ts   # starter YouTube songs that ship with the site
-    ├── ui/                   # one module per panel section + Play mode panel
+    ├── ui/                   # one module per panel section + Play mode panel; i18n.ts switches language
     ├── stage/
     │   ├── renderer.ts       # frame loop, layout, draw order
     │   ├── layout.ts         # ring radii, dancer counts, sizes
@@ -416,6 +432,9 @@ Runs once per song in a Web Worker.
 - [ ] Settings persist across reloads; no network calls except fonts (and YouTube, only when a YouTube song is used)
 - [ ] YouTube songs: starter list and added links show with badges; any link format is accepted and invalid links get a clear message; the player stays visible and never overlaps the ground (Now playing box in the Music section in Build mode, bottom-right in Play mode, ground clear of it at 1280×720, 1440×900 and 1920×1080), and switching modes doesn't reload it; tap-to-sync after 4+ taps, saved per video; embedding errors show the message from §5.7
 - [ ] Dancers rest on page load and with no song playing; they move only while a song plays (files and YouTube, from the song list or Play mode), freeze on pause, resume in place, and ease back to rest when the song ends or stops; Play garba with no song shows "Pick a song to start the garba"
+- [ ] EN | ગુ toggle: English by default; each mode shows only its own language (logo excepted); the choice survives a reload
+- [ ] No night label in the header; no "on every dancer", Music explanation, Steps how-to or Auto fallback text
+- [ ] Steps reorder by dragging the ⋮⋮ handle (drop line shown, Esc cancels) and by Alt+↑ / Alt+↓
 - [ ] Narrow-window message below 1024 px
 - **M7 Outfits — Deferred:** no checklist items in this version (spec kept in `docs/M7-outfits.md`).
 - [ ] Steps section shows Steps and Formations groups; both add into one sequence

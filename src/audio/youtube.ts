@@ -1,3 +1,4 @@
+import type { SongErrorKey } from "../data/strings";
 import type { Playback, PlayerEvent } from "./player";
 
 // YouTube songs (§5.7) play through the YouTube IFrame Player API. The player must stay visible,
@@ -26,23 +27,24 @@ export function parseYouTubeId(input: string): string | null {
   return id && /^[\w-]{11}$/.test(id) ? id : null;
 }
 
-/** Messages for the IFrame API's error codes. */
-export function youtubeErrorMessage(code: number): string {
-  if (code === 101 || code === 150 || code === 153) return "This video's owner doesn't allow it to play on other sites. Try a different upload.";
-  if (code === 100) return "That video isn't available: it may be private or removed.";
-  if (code === 2) return "That doesn't look like a valid YouTube video. Check the link.";
-  return "YouTube couldn't play this video. Try again, or try a different upload.";
+/** Error for the IFrame API's error codes (the message text is in data/strings.ts). */
+export function youtubeError(code: number): SongErrorKey {
+  if (code === 101 || code === 150 || code === 153) return "ytBlocked";
+  if (code === 100) return "ytUnavailable";
+  if (code === 2) return "ytInvalid";
+  return "ytFailed";
 }
 
-export type YouTubeLoad = { ok: true } | { ok: false; message: string };
+/** "replaced": a newer load (or an unload) took over before this one finished. */
+export type YouTubeLoad = { ok: true } | { ok: false; error: SongErrorKey | "replaced" };
 
 export interface YouTubePlayer extends Playback {
   /** Cue a video (without playing). Resolves when it's ready or failed. */
   load(videoId: string): Promise<YouTubeLoad>;
   /** The video's title as YouTube reports it (empty until known). */
   title(): string;
-  /** The last error message, if the current video failed. */
-  readonly error: string | null;
+  /** Why the current video failed, if it did. */
+  readonly error: SongErrorKey | null;
 }
 
 /* Minimal types for the parts of the IFrame API used here. */
@@ -84,7 +86,7 @@ export function createYouTubePlayer(frame: HTMLElement): YouTubePlayer {
   let ready = false;
   let id: string | null = null;
   let loading = false;
-  let error: string | null = null;
+  let error: SongErrorKey | null = null;
   let state = -1;
   let settle: ((r: YouTubeLoad) => void) | null = null;
   const listeners = new Set<(e: PlayerEvent) => void>();
@@ -101,7 +103,7 @@ export function createYouTubePlayer(frame: HTMLElement): YouTubePlayer {
 
   function finish(result: YouTubeLoad) {
     loading = false;
-    if (!result.ok) error = result.message;
+    if (!result.ok && result.error !== "replaced") error = result.error;
     settle?.(result);
     settle = null;
     emit(result.ok ? "ready" : "error");
@@ -117,9 +119,9 @@ export function createYouTubePlayer(frame: HTMLElement): YouTubePlayer {
   }
 
   function onError(e: { data: number }) {
-    const message = youtubeErrorMessage(e.data);
-    if (loading) finish({ ok: false, message });
-    else { error = message; state = -1; emit("error"); }
+    const failure = youtubeError(e.data);
+    if (loading) finish({ ok: false, error: failure });
+    else { error = failure; state = -1; emit("error"); }
   }
 
   const playing = () => !!yt && ready && !error && state === PLAYING;
@@ -151,19 +153,19 @@ export function createYouTubePlayer(frame: HTMLElement): YouTubePlayer {
       loading = true;
       state = -1;
       resync(0);
-      settle?.({ ok: false, message: "replaced" });
+      settle?.({ ok: false, error: "replaced" });
       emit("loading");
       let api: YTNamespace;
       try {
         api = await loadApi();
       } catch {
-        if (id === videoId) finish({ ok: false, message: "YouTube couldn't load. Check your internet connection, or that YouTube isn't blocked." });
-        return { ok: false, message: "YouTube couldn't load." };
+        if (id === videoId) finish({ ok: false, error: "ytNoApi" });
+        return { ok: false, error: "ytNoApi" };
       }
-      if (id !== videoId) return { ok: false, message: "replaced" };
+      if (id !== videoId) return { ok: false, error: "replaced" };
       return new Promise<YouTubeLoad>((resolve) => {
         settle = resolve;
-        const timeout = setTimeout(() => { if (settle === resolve && id === videoId) finish({ ok: false, message: "YouTube didn't respond. Try again." }); }, 15000);
+        const timeout = setTimeout(() => { if (settle === resolve && id === videoId) finish({ ok: false, error: "ytNoResponse" }); }, 15000);
         const done = settle;
         settle = (r) => { clearTimeout(timeout); done(r); };
         if (!yt) {
@@ -188,7 +190,7 @@ export function createYouTubePlayer(frame: HTMLElement): YouTubePlayer {
     },
     unload() {
       if (yt && ready) yt.stopVideo();
-      settle?.({ ok: false, message: "replaced" });
+      settle?.({ ok: false, error: "replaced" });
       settle = null;
       id = null;
       loading = false;

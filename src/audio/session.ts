@@ -1,6 +1,7 @@
 import { loadBeatMap, loadCorrections, loadSongHash, saveBeatMap, saveCorrections, saveSongHash, sha1 } from "../analysis/cache";
 import { prepareSamples, runAnalysis, type AnalysisJob } from "../analysis/client";
 import { NO_CORRECTIONS, TAPS_NEEDED, applyCorrections, fitTaps, type BeatGrid, type Corrections } from "../analysis/corrections";
+import type { SongErrorKey } from "../data/strings";
 import type { BeatMap } from "../state/types";
 import type { Library, Song } from "./library";
 import type { Media } from "./media";
@@ -27,7 +28,7 @@ export interface SongSession {
   /** YouTube: the saved tap sync, or null while not synced yet. */
   readonly sync: TapSync | null;
   /** Why the current song can't play, if it can't. */
-  readonly error: string | null;
+  readonly error: SongErrorKey | null;
   select(id: string | null): Promise<void>;
   /** Show cached analysis results in the song list without reading the files. */
   restoreStatuses(): Promise<void>;
@@ -56,7 +57,7 @@ export function createSongSession(library: Library, player: Player, youtube: You
   let source: "file" | "youtube" | null = null;
   let sync: TapSync | null = null;
   let videoId: string | null = null;
-  let error: string | null = null;
+  let error: SongErrorKey | null = null;
   const listeners = new Set<() => void>();
   const notify = () => listeners.forEach((l) => l());
 
@@ -79,7 +80,7 @@ export function createSongSession(library: Library, player: Player, youtube: You
     const result = await youtube.load(videoId);
     if (my !== token) return;
     if (!result.ok) {
-      error = result.message;
+      error = result.error === "replaced" ? null : result.error;
       library.setState(song.id, "error");
       notify();
       return;
@@ -173,7 +174,7 @@ export function createSongSession(library: Library, player: Player, youtube: You
     const ok = await player.load(song.id, async () => bytes);
     if (my !== token) return;
     library.setState(song.id, ok ? "ready" : "error", ok ? player.duration : undefined);
-    if (!ok) { error = "This file couldn't be played."; notify(); }
+    if (!ok) { error = "fileFailed"; notify(); }
     if (!ok || !player.buffer) return;
     hash = h;
 

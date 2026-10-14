@@ -10,14 +10,14 @@
   transition: opacity .4s ease;
 }
 .pp-step { display: grid; gap: 2px; line-height: 1.05; }
-.pp-step .gu { font-family: var(--display); font-weight: 800; font-size: 34px; }
-.pp-step .en { font-size: 13px; color: var(--muted); }
+.pp-step .main { font-family: var(--display); font-weight: 800; font-size: 34px; }
+.pp-step .sub { font-size: 13px; color: var(--muted); }
 
 /* Sequence progress: one stacked segment per step, filling as it dances. */
 .pp-seq { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; align-content: start; flex: 1; min-height: 0; overflow-y: auto; position: relative; }
 .pp-seq li { display: grid; gap: 4px; }
 .pp-seq .nm { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
-.pp-seq .gu { font-family: var(--display); font-weight: 700; font-size: 15px; }
+.pp-seq .main { font-family: var(--display); font-weight: 700; font-size: 15px; }
 .pp-seq li.now .nm { color: var(--ink); }
 .pp-seq i { display: block; height: 6px; border-radius: 3px; background: var(--line); position: relative; overflow: hidden; }
 .pp-seq b { position: absolute; inset: 0 auto 0 0; background: var(--accent); }

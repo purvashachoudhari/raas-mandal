@@ -9,8 +9,8 @@ import { createMedia } from "./audio/media";
 import { createPlayer } from "./audio/player";
 import { createYouTubePlayer } from "./audio/youtube";
 import { createSongSession } from "./audio/session";
-import { nightFor, themeFor } from "./data/nights";
-import { STEPS } from "./data/steps";
+import { themeFor } from "./data/nights";
+import type { Lang, Strings } from "./data/strings";
 import { autoSequence, barEnergies } from "./state/choreography";
 import { sequenceAt } from "./state/sequence";
 import { createStore } from "./state/store";
@@ -22,6 +22,7 @@ import { mountCentre } from "./ui/centre";
 import { mountCircles } from "./ui/circles";
 import { mountDirection } from "./ui/direction";
 import { byId } from "./ui/dom";
+import { getLang, localized, setLang, t } from "./ui/i18n";
 import { mountMusic } from "./ui/music";
 import { mountNights } from "./ui/nights";
 import { mountPlayPanel } from "./ui/playPanel";
@@ -62,14 +63,32 @@ mountCentre(panel, store);
 const music = mountMusic(panel, store, library, media, session);
 const steps = mountSteps(panel, store);
 
-store.watch(
-  (s) => s.night,
-  (n) => {
-    const night = nightFor(n);
-    applyTheme(themeFor(n));
-    byId("tonight").innerHTML = `Night ${night.n} · <b>${night.name}</b> · ${night.date}`;
-  },
-);
+store.watch((s) => s.night, (n) => applyTheme(themeFor(n)));
+
+// Declared before the language block, whose first run uses them.
+const stageMsg = byId("stageMsg");
+let stageMsgText: ((s: Strings) => string) | null = null;
+/** The step shown under the stage in Build mode (undefined: nothing rendered yet). */
+let shownStep: string | null | undefined;
+
+// ---------- Language ----------
+// EN | ગુ beside Play garba: one language at a time (strings in data/strings.ts).
+const langToggle = byId("langToggle");
+const langButtons = [...langToggle.querySelectorAll<HTMLButtonElement>("button[data-lang]")];
+for (const b of langButtons) b.onclick = () => setLang(b.dataset.lang as Lang);
+localized(() => {
+  const s = t();
+  for (const b of langButtons) b.setAttribute("aria-pressed", String(b.dataset.lang === getLang()));
+  langToggle.setAttribute("aria-label", s.language);
+  byId("playLabel").textContent = s.playGarba;
+  byId("stageTag").textContent = s.preview;
+  byId("stageCanvas").setAttribute("aria-label", s.stageAria);
+  byId("panel").setAttribute("aria-label", s.panelAria);
+  byId("narrowTitle").textContent = s.narrowTitle;
+  byId("narrowBody").textContent = s.narrowBody;
+  if (stageMsgText) stageMsg.textContent = stageMsgText(s);
+  shownStep = undefined; // re-render the current step's name
+});
 
 // ---------- Choreography ----------
 // Auto: a plan from the analysed song's energy, rebuilt when the song or its beat corrections change.
@@ -127,7 +146,7 @@ const playPanel = mountPlayPanel(byId("playPanel"), {
 
 function enterPlay() {
   if (!songSelected()) {
-    showStageMessage("Pick a song to start the garba");
+    showStageMessage((s) => s.pickSong);
     return;
   }
   mode = "play";
@@ -171,10 +190,10 @@ function seekBy(seconds: number) {
 byId("playBtn").onclick = enterPlay;
 
 // A short message over the stage, e.g. when Play garba is pressed with no song selected.
-const stageMsg = byId("stageMsg");
 let stageMsgTimer = 0;
-function showStageMessage(text: string) {
-  stageMsg.textContent = text;
+function showStageMessage(text: (s: Strings) => string) {
+  stageMsgText = text;
+  stageMsg.textContent = text(t());
   stageMsg.classList.add("show");
   clearTimeout(stageMsgTimer);
   stageMsgTimer = window.setTimeout(() => stageMsg.classList.remove("show"), 3000);
@@ -277,7 +296,6 @@ document.addEventListener("keydown", (e) => {
 // ---------- Frame loop ----------
 const renderer = createRenderer(byId<HTMLCanvasElement>("stageCanvas"), byId("stage"));
 const nowStep = byId("nowStep");
-let shownStep: string | null = null;
 let shownSequence: readonly SequenceItem[] | null = null;
 /** Beat position at rest before any song: between beats, so beat-driven lights and glows sit quietly. */
 const REST_BEAT = 0.5;
@@ -328,7 +346,8 @@ function tick() {
     playPanel.update(pos, clock.paused, song ? { title: song.title, time: media.currentTime(), duration: media.duration } : null, waiting);
   } else if ((pos?.step ?? null) !== shownStep) {
     shownStep = pos?.step ?? null;
-    nowStep.innerHTML = pos ? `<span class="gu">${STEPS[pos.step].gu}</span><br><span class="en">${STEPS[pos.step].en} · ${STEPS[pos.step].feel}</span>` : "";
+    const st = pos ? t().steps[pos.step] : null;
+    nowStep.innerHTML = st ? `<span class="main">${st.name}</span><br><span class="sub">${st.feel}</span>` : "";
   }
 
   requestAnimationFrame(tick);
