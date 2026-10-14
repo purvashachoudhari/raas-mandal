@@ -9,9 +9,11 @@ import { drawBetween } from "./festive/between";
 import { drawCentre } from "./festive/centrepieces";
 import { EDGE_LIGHT_RADIUS, computeLayout, type Rect } from "./layout";
 import { PatternCache, printColours, tilePx } from "./patterns";
-import { blendPose, pose } from "./poses";
+import { blendPose, pose, restPose } from "./poses";
 import { bump, flash, mod } from "./pulse";
 import { circle } from "./shapes";
+
+export type Motion = "dancing" | "paused" | "resting";
 
 /** Everything one frame needs. The renderer never reads the DOM panel or audio directly. */
 export interface Frame {
@@ -22,8 +24,13 @@ export interface Frame {
   stepBeat: number | null;
   /** Local tempo. */
   bpm: number;
-  /** False when paused or frozen for reduced motion: circles ease to a stop. */
-  moving: boolean;
+  /**
+   * dancing: a song is playing. paused: a started song is paused, so everything freezes in place.
+   * resting: no song playing; dancers ease back to the resting pose and the circles ease to a stop.
+   */
+  motion: Motion;
+  /** Flame flicker phase: the beat while dancing or paused, slow wall-clock time at rest. */
+  flick: number;
   playMode: boolean;
   /** Play mode: screen area the ground must stay clear of (the YouTube player), in stage CSS px. */
   avoid?: Rect | null;
@@ -35,6 +42,10 @@ export interface Frame {
 const BLEND_BEATS = 0.25;
 /** How quickly circle speed eases towards its target (per second). */
 const SPEED_EASE = 4;
+/** Circle speed (radians per second) below which a slowing circle stops outright. */
+const MIN_SPEED = 0.003;
+/** How quickly dancers ease between dancing and the resting pose (per second). */
+const REST_EASE = 2.5;
 
 export interface Renderer {
   draw(frame: Frame): void;
@@ -48,6 +59,8 @@ export function createRenderer(canvas: HTMLCanvasElement, host: HTMLElement): Re
   const angle = [0, 0, 0, 0, 0];
   const speed = [0, 0, 0, 0, 0];
   let lastTime: number | null = null;
+  /** 0 = dancing, 1 = resting pose. The page opens at rest. */
+  let rest = 1;
 
   function resize() {
     const r = host.getBoundingClientRect();
@@ -61,10 +74,13 @@ export function createRenderer(canvas: HTMLCanvasElement, host: HTMLElement): Re
   new ResizeObserver(resize).observe(host);
   resize();
 
-  function draw({ scene, beat, stepBeat, bpm, moving, playMode, avoid = null, time }: Frame) {
+  function draw({ scene, beat, stepBeat, bpm, motion, flick, playMode, avoid = null, time }: Frame) {
     if (!ctx || !width || !height) return;
     const dt = lastTime === null ? 0 : Math.min(0.1, Math.max(0, time - lastTime));
     lastTime = time;
+    if (motion !== "paused") rest += ((motion === "resting" ? 1 : 0) - rest) * Math.min(1, dt * REST_EASE);
+    const restBlend = rest > 0.99 ? 1 : rest * rest * (3 - 2 * rest);
+    const still = restPose(scene.sequence[0]?.step ?? null);
 
     const night = themeFor(scene.night);
     const L = computeLayout(width, height, scene.circles.length, playMode, scene.betweenDecor.length > 0, avoid);
@@ -116,8 +132,8 @@ export function createRenderer(canvas: HTMLCanvasElement, host: HTMLElement): Re
       ctx.fill();
     }
 
-    drawBetween(ctx, scene.betweenDecor, L.lanes, beat, night);
-    drawCentre(ctx, scene.centre, { c: L.inner * 0.62, outer: L.outer, beat, palette: [night.wearDark, night.wear, night.accent] });
+    drawBetween(ctx, scene.betweenDecor, L.lanes, beat, flick, night);
+    drawCentre(ctx, scene.centre, { c: L.inner * 0.62, outer: L.outer, beat, flick, palette: [night.wearDark, night.wear, night.accent] });
 
     // Dancers, inner circle to outer.
     const s = L.size;
@@ -147,14 +163,20 @@ export function createRenderer(canvas: HTMLCanvasElement, host: HTMLElement): Re
       const r = L.radii[ri], n = L.counts[ri];
       // Screen y points down, so anticlockwise is a decreasing angle.
       const sign = circle.direction === "ccw" ? -1 : 1;
-      const target = moving ? (sign * travel * (bpm / 60) * (s * 0.32)) / r : 0;
-      speed[ri] += (target - speed[ri]) * Math.min(1, dt * SPEED_EASE);
-      angle[ri] += speed[ri] * dt;
+      const target = motion === "dancing" ? (sign * travel * (bpm / 60) * (s * 0.32)) / r : 0;
+      // Paused: hold both, so resuming carries on at the same place and speed.
+      if (motion !== "paused") {
+        speed[ri] += (target - speed[ri]) * Math.min(1, dt * SPEED_EASE);
+        if (target === 0 && Math.abs(speed[ri]) < MIN_SPEED) speed[ri] = 0; // come to a real stop
+        angle[ri] += speed[ri] * dt;
+      }
 
       // Poses and positions per slot (a place on the circle).
       const poses = Array.from({ length: n }, (_, slot) => {
+        if (restBlend === 1) return still;
         const p = pose(pos?.step ?? null, pos?.beatInStep ?? 0, slot);
-        return blend < 1 && pos?.prev ? blendPose(pose(pos.prev.step, pos.prev.lengthBeats, slot), p, blend) : p;
+        const danced = blend < 1 && pos?.prev ? blendPose(pose(pos.prev.step, pos.prev.lengthBeats, slot), p, blend) : p;
+        return restBlend > 0 ? blendPose(danced, still, restBlend) : danced;
       });
       const xy = poses.map((p, slot) => {
         const th = angle[ri] + (slot / n) * TAU + (p.tang * s) / r;

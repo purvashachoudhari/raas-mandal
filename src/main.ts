@@ -3,7 +3,7 @@ import "./styles/panel.css";
 import "./styles/stage.css";
 import "./styles/play.css";
 
-import { createPreviewClock, createSongClock, type BeatClock } from "./audio/beatClock";
+import { createSongClock } from "./audio/beatClock";
 import { createLibrary } from "./audio/library";
 import { createMedia } from "./audio/media";
 import { createPlayer } from "./audio/player";
@@ -16,7 +16,7 @@ import { sequenceAt } from "./state/sequence";
 import { createStore } from "./state/store";
 import type { Scene, SequenceItem } from "./state/types";
 import type { Rect } from "./stage/layout";
-import { createRenderer } from "./stage/renderer";
+import { createRenderer, type Motion } from "./stage/renderer";
 import { mountArrangement } from "./ui/arrangement";
 import { mountCentre } from "./ui/centre";
 import { mountCircles } from "./ui/circles";
@@ -32,17 +32,24 @@ import { applyTheme } from "./ui/theme";
 const store = createStore();
 const library = createLibrary();
 const player = createPlayer();
-const previewClock = createPreviewClock();
 const youtube = createYouTubePlayer(byId("ytFrame"));
 /** Both song sources behind one interface: files (Web Audio) and YouTube (IFrame player). */
 const media = createMedia(player, youtube);
 const session = createSongSession(library, player, youtube, media);
-const songClock = createSongClock(media, () => session.grid());
+/** One clock: the song's playback position, mapped to its detected beats. */
+const clock = createSongClock(media, () => session.grid());
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
-/** One clock: the song's playback position (mapped to its detected beats) whenever a song is selected, else the preview tempo. */
 const songSelected = () => media.loaded || media.loading;
-const clock = (): BeatClock => (songSelected() ? songClock : previewClock);
+
+// ---------- Motion ----------
+// The dancers only dance while a song plays. A started song that's paused freezes them in place;
+// once it ends or is stopped (or no song is selected) they ease back to the resting pose.
+let songStarted = false;
+media.subscribe((e) => {
+  if (e === "play") songStarted = true;
+  else if (e === "ended" || e === "unload" || e === "error") songStarted = false;
+});
 
 // ---------- Panel ----------
 const panel = byId("panel");
@@ -119,16 +126,15 @@ const playPanel = mountPlayPanel(byId("playPanel"), {
 });
 
 function enterPlay() {
+  if (!songSelected()) {
+    showStageMessage("Pick a song to start the garba");
+    return;
+  }
   mode = "play";
   document.body.classList.add("playing");
   enterFullscreen();
-  if (songSelected()) {
-    media.seek(0);
-    media.play();
-  } else {
-    previewClock.restart();
-    previewClock.resume();
-  }
+  media.seek(0);
+  media.play();
   playPanel.show();
   // The header's Play button is hidden now: keep keyboard focus in Play mode, on the panel itself.
   byId("playPanel").focus({ preventScroll: true });
@@ -139,23 +145,21 @@ function exitPlay() {
   mode = "build";
   document.body.classList.remove("playing", "idle");
   media.pause();
-  previewClock.resume();
+  songStarted = false; // leaving Play mode stops the song: the dancers ease back to rest
   if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
   playPanel.hide();
   byId("playBtn").focus();
 }
 
 function togglePause() {
-  const c = clock();
-  if (c.paused) c.resume();
-  else c.pause();
+  if (clock.paused) clock.resume();
+  else clock.pause();
   wake();
 }
 
 function restart() {
-  const c = clock();
-  c.restart();
-  c.resume();
+  clock.restart();
+  clock.resume();
   wake();
 }
 
@@ -165,6 +169,16 @@ function seekBy(seconds: number) {
 }
 
 byId("playBtn").onclick = enterPlay;
+
+// A short message over the stage, e.g. when Play garba is pressed with no song selected.
+const stageMsg = byId("stageMsg");
+let stageMsgTimer = 0;
+function showStageMessage(text: string) {
+  stageMsg.textContent = text;
+  stageMsg.classList.add("show");
+  clearTimeout(stageMsgTimer);
+  stageMsgTimer = window.setTimeout(() => stageMsg.classList.remove("show"), 3000);
+}
 
 // Fullscreen, with graceful fallback when the browser refuses.
 let fullscreenByKey = false;
@@ -265,14 +279,25 @@ const renderer = createRenderer(byId<HTMLCanvasElement>("stageCanvas"), byId("st
 const nowStep = byId("nowStep");
 let shownStep: string | null = null;
 let shownSequence: readonly SequenceItem[] | null = null;
+/** Beat position at rest before any song: between beats, so beat-driven lights and glows sit quietly. */
+const REST_BEAT = 0.5;
+/** Flame flicker phase per second at rest: slower than dancing, a gentle flicker. */
+const REST_FLICKER = 1.2;
+// The beat positions shown, held still whenever no song plays.
+let beat = REST_BEAT;
+let stepBeat: number | null = null;
 
 function tick() {
   const scene = store.get();
-  const c = clock();
-  // Reduced motion: static preview in Build mode, full dance only in Play.
+  // Reduced motion: still preview in Build mode, full dance only in Play.
   const still = reduceMotion.matches && mode === "build";
-  const beat = still ? 0 : c.beat();
-  const stepBeat = still ? 0 : c.stepBeat();
+  const motion: Motion = still || !songStarted ? "resting" : clock.paused ? "paused" : "dancing";
+  if (motion === "dancing" || motion === "paused") {
+    beat = clock.beat();
+    stepBeat = clock.stepBeat();
+  }
+  const resting = motion === "resting";
+  const flick = resting && !reduceMotion.matches ? (performance.now() / 1000) * REST_FLICKER : beat;
 
   placeYouTubeScreen(); // every frame: the slot moves with panel scrolling, list changes and resizes
   const sequence = activeSequence(scene);
@@ -285,20 +310,22 @@ function tick() {
     scene: sequence === scene.sequence ? scene : { ...scene, sequence: sequence as SequenceItem[] },
     beat,
     stepBeat,
-    bpm: c.bpm(),
-    moving: !still && !c.paused,
+    bpm: clock.bpm(),
+    motion,
+    flick,
     playMode: mode === "play",
     avoid: playScreenRect,
     time: performance.now() / 1000,
   });
 
-  const pos = stepBeat === null ? null : sequenceAt(sequence, stepBeat);
+  // At rest no step is current: the dancers stand in the resting pose.
+  const pos = resting || stepBeat === null ? null : sequenceAt(sequence, stepBeat);
   steps.setCurrent(pos?.index ?? -1);
   music.tick();
   if (mode === "play") {
     const song = media.loaded ? library.find(store.get().songId) : undefined;
-    const waiting = stepBeat === null && sequence.length > 0;
-    playPanel.update(pos, c.paused, song ? { title: song.title, time: media.currentTime(), duration: media.duration } : null, waiting);
+    const waiting = !resting && stepBeat === null && sequence.length > 0;
+    playPanel.update(pos, clock.paused, song ? { title: song.title, time: media.currentTime(), duration: media.duration } : null, waiting);
   } else if ((pos?.step ?? null) !== shownStep) {
     shownStep = pos?.step ?? null;
     nowStep.innerHTML = pos ? `<span class="gu">${STEPS[pos.step].gu}</span><br><span class="en">${STEPS[pos.step].en} · ${STEPS[pos.step].feel}</span>` : "";

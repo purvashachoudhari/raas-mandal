@@ -17,41 +17,8 @@ export interface BeatClock {
   restart(): void;
 }
 
-/** Fixed tempo used with no song, and while a song's beats are still being analysed. */
+/** Fixed tempo used while a song's beats are still being analysed (or a YouTube song isn't tap-synced yet). */
 export const PREVIEW_BPM = 120;
-
-/** Free-running clock at a fixed tempo, used when no song is loaded. */
-export function createPreviewClock(bpm = PREVIEW_BPM): BeatClock {
-  const now = () => performance.now() / 1000;
-  let anchorTime = now();
-  let anchorBeat = 0;
-  let paused = false;
-
-  const beat = () => (paused ? anchorBeat : anchorBeat + ((now() - anchorTime) * bpm) / 60);
-
-  return {
-    beat,
-    stepBeat: beat,
-    bpm: () => bpm,
-    get paused() {
-      return paused;
-    },
-    pause() {
-      if (paused) return;
-      anchorBeat = beat();
-      paused = true;
-    },
-    resume() {
-      if (!paused) return;
-      anchorTime = now();
-      paused = false;
-    },
-    restart() {
-      anchorBeat = 0;
-      anchorTime = now();
-    },
-  };
-}
 
 /** Index of the last beat at or before t (−1 if before the first). */
 function beatIndex(beats: number[], t: number): number {

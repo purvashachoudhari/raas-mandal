@@ -12,6 +12,8 @@ interface DecorArgs {
   r: number;
   w: number;
   beat: number;
+  /** Flame flicker phase (see CentreArgs.flick). */
+  flick: number;
   theme: NightTheme;
 }
 
@@ -34,10 +36,10 @@ function fillAll(ctx: CanvasRenderingContext2D, colour: string, add: () => void)
 }
 
 /** Row of clay diyas whose flames brighten on every beat. */
-const diyas: Draw = (ctx, { r, w, beat }) => {
+const diyas: Draw = (ctx, { r, w, beat, flick }) => {
   const pts = ring(r, w * 1.5);
   const glow = 0.55 + 0.45 * flash(beat, 0.18);
-  const f = pts.map((_, i) => flicker(beat, i) * w * 0.13);
+  const f = pts.map((_, i) => flicker(flick, i) * w * 0.13);
   fillAll(ctx, "#8f3b1c", () => pts.forEach((p) => oval(ctx, p.x, p.y, w * 0.3, w * 0.42, p.a)));
   fillAll(ctx, "#c2602e", () => pts.forEach((p) => oval(ctx, p.x, p.y, w * 0.21, w * 0.32, p.a)));
   fillAll(ctx, `rgba(255,190,80,${0.35 * glow})`, () => pts.forEach((p, i) => circle(ctx, p.x, p.y, f[i] * 2.6)));
@@ -113,11 +115,11 @@ const DECOR: Record<DecorId, Draw> = { diyas, garland, lights, rangoliBorder };
  * Draw the selected decorations in the lanes. With as many lanes as decorations or more, the
  * decorations repeat across lanes in turn; with fewer lanes, a lane is shared by splitting it.
  */
-export function drawBetween(ctx: CanvasRenderingContext2D, ids: readonly DecorId[], lanes: readonly { r: number; w: number }[], beat: number, theme: NightTheme) {
+export function drawBetween(ctx: CanvasRenderingContext2D, ids: readonly DecorId[], lanes: readonly { r: number; w: number }[], beat: number, flick: number, theme: NightTheme) {
   if (!ids.length || !lanes.length) return;
   lanes.forEach((lane, li) => {
     const here = ids.length <= lanes.length ? [ids[li % ids.length]] : ids.filter((_, j) => j % lanes.length === li);
     const sub = lane.w / here.length;
-    here.forEach((id, k) => DECOR[id](ctx, { r: lane.r - lane.w / 2 + sub * (k + 0.5), w: sub, beat, theme }));
+    here.forEach((id, k) => DECOR[id](ctx, { r: lane.r - lane.w / 2 + sub * (k + 0.5), w: sub, beat, flick, theme }));
   });
 }

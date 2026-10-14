@@ -8,15 +8,17 @@ export interface CentreArgs {
   c: number;
   /** Outer edge of the ground (the pillar's light strings run to it). */
   outer: number;
-  /** Beat position: drives every pulse, flicker and slow rotation. */
+  /** Beat position: drives every pulse and slow rotation. Held still while no song plays. */
   beat: number;
+  /** Flame flicker phase: keeps going gently at rest, so flames never look frozen. */
+  flick: number;
   palette: readonly string[];
 }
 
 type Draw = (ctx: CanvasRenderingContext2D, a: CentreArgs) => void;
 
-export function flame(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, beat: number, seed = 0) {
-  const fl = flicker(beat, seed);
+export function flame(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, flick: number, seed = 0) {
+  const fl = flicker(flick, seed);
   ctx.save();
   ctx.shadowColor = "rgba(255,190,80,.55)"; ctx.shadowBlur = s * 1.2;
   ctx.fillStyle = "#ffb627"; ctx.beginPath(); ctx.moveTo(x, y - s * fl);
@@ -26,7 +28,7 @@ export function flame(ctx: CanvasRenderingContext2D, x: number, y: number, s: nu
 }
 
 /** Perforated earthen pot with a diya inside; holes pulse on the beat. */
-const garbo: Draw = (ctx, { c, beat }) => {
+const garbo: Draw = (ctx, { c, beat, flick }) => {
   const pulse = 0.5 + 0.5 * flash(beat);
   ctx.fillStyle = "#9c3f25"; ctx.beginPath(); ctx.ellipse(0, c * 0.1, c * 0.62, c * 0.6, 0, 0, TAU); ctx.fill();
   ctx.fillStyle = "#7a2d18"; ctx.beginPath(); ctx.ellipse(0, -c * 0.42, c * 0.3, c * 0.09, 0, 0, TAU); ctx.fill();
@@ -40,20 +42,20 @@ const garbo: Draw = (ctx, { c, beat }) => {
   }
   ctx.restore();
   ctx.fillStyle = "#c9762d"; ctx.beginPath(); ctx.ellipse(0, -c * 0.48, c * 0.17, c * 0.06, 0, 0, Math.PI); ctx.fill();
-  flame(ctx, 0, -c * 0.5, c * 0.2, beat);
+  flame(ctx, 0, -c * 0.5, c * 0.2, flick);
 };
 
 /** Brass lamp with a flickering flame. */
-const jyot: Draw = (ctx, { c, beat }) => {
+const jyot: Draw = (ctx, { c, flick }) => {
   for (let i = 3; i >= 0; i--) {
     ctx.fillStyle = i % 2 ? "#b8862b" : "#e2b44a"; ctx.beginPath(); ctx.arc(0, 0, c * (0.25 + i * 0.12), 0, TAU); ctx.fill();
   }
   ctx.fillStyle = "#7a5414"; ctx.beginPath(); ctx.arc(0, 0, c * 0.2, 0, TAU); ctx.fill();
-  flame(ctx, 0, c * 0.05, c * 0.38, beat);
+  flame(ctx, 0, c * 0.05, c * 0.38, flick);
 };
 
 /** Decorated arch with red chunari, trishul and a diya (abstract, no depiction of the deity). */
-const mataji: Draw = (ctx, { c, beat }) => {
+const mataji: Draw = (ctx, { c, flick }) => {
   ctx.fillStyle = "#c08a22"; ctx.beginPath(); ctx.moveTo(-c * 0.55, c * 0.55); ctx.lineTo(-c * 0.55, -c * 0.15); ctx.arc(0, -c * 0.15, c * 0.55, Math.PI, TAU); ctx.lineTo(c * 0.55, c * 0.55); ctx.closePath(); ctx.fill();
   ctx.fillStyle = "#b5122e"; ctx.beginPath(); ctx.moveTo(-c * 0.44, c * 0.48); ctx.lineTo(-c * 0.44, -c * 0.12); ctx.arc(0, -c * 0.12, c * 0.44, Math.PI, TAU); ctx.lineTo(c * 0.44, c * 0.48); ctx.closePath(); ctx.fill();
   ctx.fillStyle = "#f2c94c";
@@ -70,11 +72,11 @@ const mataji: Draw = (ctx, { c, beat }) => {
     const a = Math.PI * 0.15 + (i / 8) * Math.PI * 0.7;
     ctx.beginPath(); ctx.arc(Math.cos(a) * c * 0.75, c * 0.15 + Math.sin(a) * c * 0.55, c * 0.06, 0, TAU); ctx.fill();
   }
-  flame(ctx, 0, c * 0.66, c * 0.12, beat);
+  flame(ctx, 0, c * 0.66, c * 0.12, flick);
 };
 
 /** Carved wooden canopy seen from above. */
-const mandvi: Draw = (ctx, { c, beat }) => {
+const mandvi: Draw = (ctx, { c, beat, flick }) => {
   ctx.save(); ctx.rotate(beat * 0.025);
   ctx.fillStyle = "#6b3a1c"; ctx.beginPath(); ctx.roundRect(-c * 0.62, -c * 0.62, c * 1.24, c * 1.24, c * 0.1); ctx.fill();
   ctx.fillStyle = "#b5122e"; ctx.beginPath(); ctx.roundRect(-c * 0.5, -c * 0.5, c, c, c * 0.06); ctx.fill();
@@ -89,7 +91,7 @@ const mandvi: Draw = (ctx, { c, beat }) => {
   for (const [x, y] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { ctx.beginPath(); ctx.arc(x * c * 0.5, y * c * 0.5, c * 0.09, 0, TAU); ctx.fill(); }
   ctx.beginPath(); ctx.arc(0, 0, c * 0.26, 0, TAU); ctx.fill();
   ctx.restore();
-  flame(ctx, 0, c * 0.02, c * 0.16, beat);
+  flame(ctx, 0, c * 0.02, c * 0.16, flick);
 };
 
 /** Centre pole with toran strings and marigold lights running to the edge. */
@@ -140,7 +142,7 @@ const dhol: Draw = (ctx, { c, beat }) => {
 };
 
 /** Layered petal mandala in the night's palette, slowly rotating. */
-const rangoli: Draw = (ctx, { c, beat, palette }) => {
+const rangoli: Draw = (ctx, { c, beat, flick, palette }) => {
   ctx.save(); ctx.rotate(beat * 0.04);
   const cols = [palette[0], palette[1], palette[2], "#fff6e2"];
   for (let layer = 3; layer >= 0; layer--) {
@@ -154,7 +156,7 @@ const rangoli: Draw = (ctx, { c, beat, palette }) => {
   }
   ctx.fillStyle = "#fff6e2"; ctx.beginPath(); ctx.arc(0, 0, c * 0.18, 0, TAU); ctx.fill();
   ctx.restore();
-  flame(ctx, 0, c * 0.03, c * 0.12, beat);
+  flame(ctx, 0, c * 0.03, c * 0.12, flick);
 };
 
 const CENTREPIECES: Record<CentreId, Draw> = { garbo, jyot, mataji, mandvi, pillar, dhol, rangoli };

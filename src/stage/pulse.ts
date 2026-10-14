@@ -18,5 +18,5 @@ export function bump(beat: number, at = 0, width = 0.08): number {
   return gauss(f, 0, width) + gauss(f, 1, width);
 }
 
-/** Flame flicker, driven by the beat clock so a paused stage holds still. */
+/** Flame flicker. Its phase is the beat while a song plays (so a paused stage holds still), and slow wall-clock time at rest. */
 export const flicker = (beat: number, seed = 0) => 1 + 0.08 * Math.sin(beat * 8.5 + seed) + 0.05 * Math.sin(beat * 14.5 + seed * 1.7);

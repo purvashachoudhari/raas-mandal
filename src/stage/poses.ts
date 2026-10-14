@@ -182,6 +182,14 @@ export function pose(step: StepId | null, lb: number, j: number): Pose {
   return p;
 }
 
+/**
+ * Neutral resting pose while no song plays: standing still, arms relaxed, holding the props of the
+ * first step in the sequence so the still preview reflects the steps chosen.
+ */
+export function restPose(step: StepId | null): Pose {
+  return { ...REST, prop: step ? pose(step, 0, 0).prop : null };
+}
+
 export function blendPose(a: Pose, b: Pose, t: number): Pose {
   const mix = (x: number, y: number) => x + (y - x) * t;
   const out = { ...(t > 0.5 ? b : a) };

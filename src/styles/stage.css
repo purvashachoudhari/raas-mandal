@@ -7,6 +7,14 @@
 .now-step { position: absolute; left: 16px; bottom: 14px; pointer-events: none; line-height: 1.1; }
 .now-step .gu { font-family: var(--display); font-weight: 800; font-size: 26px; }
 .now-step .en { font-size: 13px; color: var(--muted); }
+/* Short message over the stage (e.g. Play garba with no song selected). */
+.stage-msg {
+  position: absolute; left: 50%; top: 14px; transform: translate(-50%, -6px); max-width: calc(100% - 32px);
+  padding: 8px 16px; border: 1px solid var(--accent); border-radius: 999px; background: var(--panel);
+  color: var(--ink); font-size: 14px; pointer-events: none; opacity: 0; transition: opacity .2s, transform .2s;
+}
+.stage-msg.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { .stage-msg { transition: none; } }
 
 /* YouTube player screen (it must stay visible while a YouTube song is selected). */
 .yt-screen {

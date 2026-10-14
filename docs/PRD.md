@@ -36,14 +36,14 @@ Raas Mandal (રાસ મંડળ) is a laptop web app for people who are away
 
 Two modes:
 
-1. **Build mode.** Left panel of controls, live preview of the garba ground on the right. Every change shows immediately in the preview.
+1. **Build mode.** Left panel of controls, live preview of the garba ground on the right. Every change shows immediately in the preview. The dancers stand still until a song plays (§5.12).
 2. **Play mode.** The ground goes full screen, the selected song plays, and the dancers follow the beat. A translucent control panel docked on the left shows the current step and song progress, and fades away while you watch.
 
 **Primary flow**
 1. Open the app. It opens on tonight's Navratri night (by date), or Night 1 outside the festival.
 2. Adjust the scene top to bottom in the left panel (order in §5).
 3. Select a song. Beat analysis runs once (progress shown), then the song is marked ready.
-4. Press **Play garba**. Full-screen dance begins on the first downbeat.
+4. Press **Play garba**. Full-screen dance begins on the first downbeat. With no song selected, the app says "Pick a song to start the garba" and stays in Build mode.
 5. Press Esc or **Back to build** to return. All settings persist on reload.
 
 ---
@@ -163,7 +163,7 @@ The dancers follow the song's beats through one beat clock (§8): song time → 
 - The beat clock reads the player's current time, **smoothed between YouTube's coarse updates** (extrapolated from the last reading and gently pulled towards each new one; a seek is trusted until YouTube reports the new position).
 - Tools: nudge earlier/later (±10 ms), **½×** and **2×** tempo, and Reset.
 - Saved per video in `localStorage` (tempo, phase and nudge), so a song is synced once per browser.
-- Before syncing, the dancers move at a default **120 bpm**.
+- Before syncing, the dancers dance at a default **120 bpm** while the song plays.
 - Auto choreography (§5.9) needs an analysed file's energy curve; with a YouTube song the manual sequence plays.
 
 ### 5.9 Steps (P0)
@@ -223,6 +223,17 @@ A preset library of ten steps and two whole-circle formations. The user arranges
 - Scene settings (night, print, circles, directions, arrangements, festive elements, sequence, last song) saved to `localStorage` on every change.
 - Beat analysis results saved in IndexedDB, keyed by a hash of the file.
 - No accounts, no server.
+
+### 5.12 When the dancers move (P0)
+
+The dancers only dance while a song is actually playing.
+
+- **At rest** (on page load, and whenever no song is playing): the dancers stand still in a neutral resting pose (arms relaxed, holding the first step's props) and the circles don't rotate. Every setting (night, print, circles, direction, arrangement, centrepiece, steps) still updates this still preview instantly.
+- **Start:** dancers and circles start moving when a song starts playing, for local files and YouTube songs alike, whether it's started from the song list's preview controls, the YouTube player, or Play mode. They ease in from the resting pose.
+- **Pause:** pausing the song freezes everything in place, mid-pose. Resuming carries on from the same spot. Scrubbing while paused shows the pose at the new position.
+- **End or stop:** when the song ends, a different song is selected, or Play mode is left with **Back to build** or Esc (which stops the song), the dancers ease back to the resting pose over a second or two and the circles slow to a stop.
+- **Beat-driven effects** (edge lights chasing, centre twinkles, garbo glow pulses, abhla mirror glints, dhol strikes, slowly turning centrepieces) only animate while the song plays, and freeze with the dancers. Diya and lamp flames keep a gentle flicker at rest.
+- **Play garba with no song selected:** shows a short message over the stage, "Pick a song to start the garba", and doesn't enter Play mode or start the dancers.
 
 ---
 
@@ -351,7 +362,8 @@ Runs once per song in a Web Worker.
 - Dancer geometry in local units (1 = dancer size): head outward, ghagra or kediyu toward the centre; rotation = circle angle + 90° + pose sway + pose spin.
 - Print fills use cached `CanvasPattern`s; pattern scale tracks dancer size.
 - Circle angular speed = direction × step travel factor × local tempo, normalised so all circles move at a similar walking speed; speed changes ease over 0.25 s.
-- Respect `prefers-reduced-motion` in Build mode (static preview until Play).
+- Motion follows §5.12: dancing while the song plays, frozen while it's paused, easing to the resting pose otherwise.
+- Respect `prefers-reduced-motion` in Build mode: the preview stays at rest (flames included) even while a song plays; the full dance shows only in Play mode.
 
 ## 10. Quality targets
 
@@ -403,6 +415,7 @@ Runs once per song in a Web Worker.
 - [ ] Play mode keyboard controls, auto-hiding control panel, ground fits the screen
 - [ ] Settings persist across reloads; no network calls except fonts (and YouTube, only when a YouTube song is used)
 - [ ] YouTube songs: starter list and added links show with badges; any link format is accepted and invalid links get a clear message; the player stays visible and never overlaps the ground (Now playing box in the Music section in Build mode, bottom-right in Play mode, ground clear of it at 1280×720, 1440×900 and 1920×1080), and switching modes doesn't reload it; tap-to-sync after 4+ taps, saved per video; embedding errors show the message from §5.7
+- [ ] Dancers rest on page load and with no song playing; they move only while a song plays (files and YouTube, from the song list or Play mode), freeze on pause, resume in place, and ease back to rest when the song ends or stops; Play garba with no song shows "Pick a song to start the garba"
 - [ ] Narrow-window message below 1024 px
 - **M7 Outfits — Deferred:** no checklist items in this version (spec kept in `docs/M7-outfits.md`).
 - [ ] Steps section shows Steps and Formations groups; both add into one sequence
