@@ -220,7 +220,6 @@ window.addEventListener("mousemove", () => { if (mode === "play") wake(); });
 const ytScreen = byId("ytScreen");
 const panelEl = byId("panel");
 const stageEl = byId("stage");
-const playPanelEl = byId("playPanel");
 const playSlot = byId("ppYtSlot");
 /** The screen's rect in stage coordinates while it's in Play mode, for the ground to avoid. */
 let playScreenRect: Rect | null = null;
@@ -230,9 +229,8 @@ function placeYouTubeScreen() {
   let r: { left: number; top: number; width: number; height: number } | null = null;
   let clip = "none";
   const showing = !!session.songId && !session.error;
-  // The Play panel only makes room for the player (and widens for it) while there is one.
+  // The Play panel only makes room for the player while there is one.
   playSlot.hidden = !showing;
-  playPanelEl.classList.toggle("has-yt", showing);
   if (showing) {
     if (mode === "play") {
       const s = playSlot.getBoundingClientRect();

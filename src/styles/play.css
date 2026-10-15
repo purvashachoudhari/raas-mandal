@@ -28,10 +28,9 @@
 .pp-ctrls { display: flex; align-items: center; gap: 8px; }
 .pp-ctrls .ghost { margin-left: auto; padding-inline: 10px; }
 
-/* YouTube player slot at the bottom of the panel: the panel widens so the player is 16:9 at
-   full width and at least 200 px tall (main.ts places the player screen over it). */
-.play-panel.has-yt { width: 393px; }
-.pp-yt { width: 100%; aspect-ratio: 16 / 9; min-height: 200px; flex: none; }
+/* YouTube player slot in the panel's bottom-left corner, at YouTube's 200×200 minimum
+   (main.ts places the player screen over it). */
+.pp-yt { width: 200px; height: 200px; flex: none; }
 
 /* Panel fades after 3 s without mouse movement; the ground never moves. The YouTube player isn't
    part of the panel, so it stays where it is, visible, while the rest fades. */

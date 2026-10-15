@@ -1,7 +1,7 @@
 import { TAU } from "../util/math";
 
 export interface StageLayout {
-  /** Ground centre in CSS px (always the stage centre). */
+  /** Ground centre in CSS px (the stage centre, unless Play mode moves it right of the YouTube player). */
   cx: number;
   cy: number;
   /** Half the usable stage size. */
@@ -36,31 +36,27 @@ const LANE = 0.3;
 
 /** Edge lights sit on the rim at `half`; the lit ones have this radius (× half), so the ground reaches 1 + this. */
 export const EDGE_LIGHT_RADIUS = 0.012;
-/** Play mode keeps this fraction of the screen's shorter side free on every side. */
+/** Play mode keeps this fraction of the ground's space (its shorter side) free on every side. */
 const PLAY_MARGIN = 0.04;
 
 /** A screen area the ground must stay clear of, in stage CSS px. */
 export interface Rect { x: number; y: number; w: number; h: number }
 
-/** Play mode keeps at least this gap between the ground's edge lights and the YouTube player. */
-const AVOID_GAP = 12;
+/** Play mode starts the ground's space this far right of the YouTube player. */
+const AVOID_GAP = 24;
 
 /**
- * Play mode ground: centred on the screen and as large as the margin allows, but clear of `avoid`
- * (the YouTube player at the bottom of the Play panel, bottom left): if the full-size ground would
- * come within AVOID_GAP of it, the ground shrinks just enough. Returns the centre and the ground's
- * outer radius (edge lights included).
+ * Play mode ground. Without `avoid` it's centred on the screen. With it (the YouTube player in the
+ * Play panel's bottom-left corner) it's centred horizontally in the space from AVOID_GAP right of the
+ * player to the screen's right edge, and vertically on the full height. Either way it's as large as
+ * that space allows with the margin. The player never moves when the panel fades, so neither does the
+ * ground. Returns the centre and the ground's outer radius (edge lights included).
  */
 function placePlayGround(width: number, height: number, avoid: Rect | null) {
-  const margin = Math.min(width, height) * PLAY_MARGIN;
-  const full = Math.min(width, height) / 2 - margin;
-  const cx = width / 2, cy = height / 2;
-  if (!avoid) return { cx, cy, r: full };
-  // Distance from the centre to the nearest point of the player.
-  const dx = Math.max(avoid.x - cx, cx - (avoid.x + avoid.w), 0);
-  const dy = Math.max(avoid.y - cy, cy - (avoid.y + avoid.h), 0);
-  const r = Math.min(full, Math.hypot(dx, dy) - AVOID_GAP);
-  return { cx, cy, r: Math.max(r, full * 0.5) };
+  const left = avoid ? Math.min(avoid.x + avoid.w + AVOID_GAP, width / 2) : 0;
+  const w = width - left;
+  const margin = Math.min(w, height) * PLAY_MARGIN;
+  return { cx: left + w / 2, cy: height / 2, r: Math.min(w, height) / 2 - margin };
 }
 
 export function computeLayout(
