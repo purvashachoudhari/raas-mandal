@@ -5,15 +5,11 @@ html.intro-pending body { background: #000; }
 html.intro-pending body > * { visibility: hidden; }
 
 .intro {
-  position: fixed; inset: 0; z-index: 100; overflow: hidden;
-  background-color: #000; transition: background-color .8s ease-in;
+  position: fixed; inset: 0; z-index: 100; overflow: hidden; background-color: #000;
 }
 .intro:focus { outline: none; }
 
-.intro-scene {
-  position: absolute; inset: 0; display: grid; place-items: center;
-  transition: transform .8s cubic-bezier(.55, 0, .8, .2), opacity .8s ease-in;
-}
+.intro-scene { position: absolute; inset: 0; display: grid; place-items: center; }
 
 /* The door unit: a 300 × 380 drawing (toran and diyas included) sized so the carved door itself
    (212 × 324 units) is about 65% of the viewport height, and at most about 32% of its width. */
@@ -22,14 +18,18 @@ html.intro-pending body > * { visibility: hidden; }
   position: relative; width: var(--u); aspect-ratio: 300 / 380;
 }
 .intro-frame { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+/* The black around the doorway, drawn in the door's own units with the exact arch cut out, reaching
+   far past the screen. It scales with the door on exit, so the site shows through the growing arch. */
+.intro-surround { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; overflow: visible; pointer-events: none; }
 
 /* Light behind the doors (the doorway opening: x 64–236, y 78–362 of 300 × 380), and its spill into the dark. */
 .intro-light, .intro-leaves, .intro-words {
   position: absolute; left: 21.333%; width: 57.333%; top: 20.526%; height: 74.737%;
 }
-.intro-light {
-  z-index: 1;
-  border-radius: 50% 50% 0 0 / 21.83% 21.83% 0 0;
+/* Dark until the doors open (the site is behind the arch), then the golden glow fades in on top. */
+.intro-light { z-index: 1; border-radius: 50% 50% 0 0 / 21.83% 21.83% 0 0; background: #000; }
+.intro-light::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
   background: radial-gradient(ellipse at 50% 58%, #fff7dc 0%, #ffd97f 38%, #f2a636 74%, #cf7114 100%);
   box-shadow: 0 0 calc(var(--u) * .16) calc(var(--u) * .04) rgba(255, 190, 80, .45);
   opacity: 0; transition: opacity 1.2s ease-out;
@@ -40,7 +40,7 @@ html.intro-pending body > * { visibility: hidden; }
   background: radial-gradient(circle, rgba(255, 204, 110, .42), rgba(255, 170, 60, .12) 34%, transparent 64%);
   transition: opacity 1.4s ease-out, scale 1.4s ease-out;
 }
-.intro.open .intro-light { opacity: 1; }
+.intro.open .intro-light::before { opacity: 1; }
 .intro.open .intro-spill { opacity: 1; scale: 1; }
 
 /* The two leaves swing inward on their outer hinges, in perspective. */
@@ -114,10 +114,15 @@ html.intro-pending body > * { visibility: hidden; }
   50% { opacity: 1; }
 }
 
-/* Enter: zoom through the doorway while the black lifts off the site. */
+/* Enter: the text and button fade, the glow fades so the site shows through the arch only, then the
+   whole scene zooms into the doorway until the arch covers the screen (timing in intro.ts). */
 .intro.leaving { background-color: transparent; pointer-events: none; }
-.intro.leaving .intro-scene { transform: scale(5); opacity: 0; }
-.intro.leaving .intro-skip { opacity: 0; }
+.intro.leaving .intro-words, .intro.leaving .intro-skip { opacity: 0; transition: opacity .2s ease; }
+.intro.leaving .intro-light, .intro.leaving .intro-spill { opacity: 0; transition: opacity .25s ease; }
+.intro.zooming .intro-scene { transform: scale(var(--zoom)); transition: transform 1.2s cubic-bezier(.65, 0, .35, 1); }
+
+/* Reduced motion: a quick crossfade to the site instead. */
+.intro.fading { opacity: 0; transition: opacity .3s ease !important; }
 
 /* Reduced motion: the door is already open with the text and button; nothing moves. */
 @media (prefers-reduced-motion: reduce) {

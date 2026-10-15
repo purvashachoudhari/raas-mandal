@@ -9,8 +9,12 @@ import { t } from "./i18n";
 const OPEN_AFTER = 1000;
 /** Door swing (ms); the CSS transition matches. */
 const SWING = 1200;
-/** Zoom through the doorway into the site (ms); the CSS transition matches. */
-const ZOOM = 800;
+/** Enter: text and glow fade first (ms), then the zoom through the doorway (ms); the CSS transitions match. */
+const FADE_FIRST = 200, ZOOM = 1200;
+/** Reduced motion: crossfade to the site (ms). */
+const CROSSFADE = 300;
+/** The doorway opening in the drawing's units (300 × 380), as cut out of the black around it. */
+const OPENING = "M64 362 V140 A86 62 0 0 1 236 140 V362 Z";
 
 /** The intro is for the laptop layout; narrow windows get the "open on a laptop" message instead.
  * index.html's inline script uses the same 1024 px test to hide the site until the intro is up. */
@@ -245,6 +249,9 @@ export function mountIntro() {
     <button type="button" class="intro-skip">${s.introSkip}</button>
     <div class="intro-scene">
       <div class="intro-door">
+        <svg class="intro-surround" viewBox="0 0 300 380" aria-hidden="true">
+          <path d="M-6000 -6000 H6300 V6380 H-6000 Z ${OPENING}" fill="#000" fill-rule="evenodd"/>
+        </svg>
         <div class="intro-spill" aria-hidden="true"></div>
         ${frameSvg()}
         <div class="intro-light" aria-hidden="true"></div>
@@ -293,13 +300,42 @@ export function mountIntro() {
       for (const el of others) el.inert = false;
       document.getElementById("playBtn")?.focus({ preventScroll: true });
     };
-    if (!zoom || reduce) return done();
-    // Zoom towards the middle of the doorway.
-    const light = intro.querySelector<HTMLElement>(".intro-words")!.getBoundingClientRect();
+    if (!zoom) return done();
+    if (reduce) {
+      intro.classList.add("fading");
+      window.setTimeout(done, CROSSFADE);
+      return;
+    }
+    // Doorway reveal: the glow fades so the site shows through the arch (the black around it is cut to
+    // the opening's exact shape), then everything zooms from the doorway until the arch fills the
+    // screen, while the site settles from 1.08× to 1× as if stepping inside.
+    const hole = intro.querySelector<HTMLElement>(".intro-light")!.getBoundingClientRect();
+    // Zoom from the middle of the doorway's straight-sided part (y 140–362 of the opening's 78–362).
+    const ox = hole.left + hole.width / 2, oy = hole.top + hole.height * ((251 - 78) / 284);
+    const origin = `${ox}px ${oy}px`;
+    // Enough that the clear gap between the open leaves (about 72% of the doorway's width) and the
+    // straight-sided part cover the screen, so the leaves are gone before the intro is removed.
+    const zoomTo = 1.15 * Math.max(window.innerWidth / (hole.width * 0.72), window.innerHeight / (hole.height * (222 / 284)));
     const scene = intro.querySelector<HTMLElement>(".intro-scene")!;
-    scene.style.transformOrigin = `${light.left + light.width / 2}px ${light.top + light.height * 0.55}px`;
+    scene.style.transformOrigin = origin;
+    scene.style.setProperty("--zoom", zoomTo.toFixed(2));
+    const app = document.querySelector<HTMLElement>(".app");
+    if (app) {
+      app.style.transformOrigin = origin;
+      app.style.transform = "scale(1.08)";
+    }
     intro.classList.add("leaving");
-    window.setTimeout(done, ZOOM);
+    window.setTimeout(() => {
+      intro.classList.add("zooming");
+      if (app) {
+        app.style.transition = `transform ${ZOOM}ms cubic-bezier(.65, 0, .35, 1)`;
+        app.style.transform = "scale(1)";
+      }
+    }, FADE_FIRST);
+    window.setTimeout(() => {
+      done();
+      if (app) app.style.transition = app.style.transform = app.style.transformOrigin = "";
+    }, FADE_FIRST + ZOOM + 50);
   }
 
   enter.onclick = () => {
