@@ -35,7 +35,7 @@ Raas Mandal (રાસ મંડળ) is a laptop web app for people who are away
 
 ## 4. Experience overview
 
-An **intro** (§5.14) greets visitors once a day: a carved haveli door that opens into the site.
+An **intro** (§5.14) greets visitors on every page load: a carved haveli door that opens into the site.
 
 Two modes:
 
@@ -45,7 +45,7 @@ Two modes:
 The header holds the logo, the **EN | ગુ** language toggle (§5.13) and the **Play garba** button. The selected night is shown only in the panel's Night section, not in the header.
 
 **Primary flow**
-1. Open the app. On the first visit of the day the intro door opens; press **Enter / ચાલો** (or Skip). The site opens on tonight's Navratri night (by date), or Night 1 outside the festival.
+1. Open the app. The intro door opens; press **Enter / ચાલો** (or Skip). The site opens on tonight's Navratri night (by date), or Night 1 outside the festival.
 2. Adjust the scene top to bottom in the left panel (order in §5).
 3. Select a song. If it isn't synced yet, play it and tap along (or type its tempo) once; the sync is saved for that song.
 4. Press **Play garba**. Full-screen dance begins on the first downbeat. With no song selected, the app says "Pick a song to start the garba" and stays in Build mode.
@@ -234,7 +234,7 @@ The dancers only dance while a song is actually playing.
 
 ### 5.14 Intro (P1)
 
-A short welcome before the site, shown **once per day per visitor** (the date is kept in `localStorage`; a reload the same day goes straight to the site).
+A short welcome before the site, shown on **every page load and refresh** (nothing is remembered; Skip is there for anyone who wants straight in).
 
 - **Scene:** pure black, full screen. In the centre, an old haveli-style carved wooden double door drawn in SVG (no image files): arched top, carved panels with rosettes and diamonds, rows of brass studs, a brass knocker on each leaf, in a carved frame with a brass finial. Warm wood and brass tones. Above it, a **toran** of orange and yellow marigolds with green mango leaves. A small **diya** on each side with a gently flickering flame. The carved door is about 65% of the viewport height (and at most about 32% of its width), keeping its proportions.
 - **Opening:** about 1 s after the intro appears, the two leaves swing open **inward** on their outer hinges with 3D perspective over about 1.2 s, and warm golden light spills out of the doorway into the dark.
@@ -244,7 +244,7 @@ A short welcome before the site, shown **once per day per visitor** (the date is
 - **Accessibility:** the intro is a modal dialog; the site behind is inert until it closes, Tab stays inside it, and focus lands on **Play garba** afterwards.
 - **Reduced motion:** the door is shown already open with the greeting and button; nothing animates (no swing, fades, flicker or zoom).
 - **No flash:** an inline script in `index.html` hides the site on black until the intro is up.
-- **Narrow windows** (below 1024 px) skip the intro and show the laptop message as before; it isn't counted as seen.
+- **Narrow windows** (below 1024 px) skip the intro and show the laptop message as before.
 - Strings live in `src/data/strings.ts` (`intro…`); the door, toran and diyas are in `src/ui/intro.ts`, the bell in `src/audio/bell.ts`, styles in `src/styles/intro.css`.
 
 ---
@@ -399,7 +399,7 @@ interface BeatGrid { beats: number[]; firstDownbeat: number; bpm: number }
 - [ ] EN | ગુ toggle: English by default; each mode shows only its own language (logo excepted); the choice survives a reload
 - [ ] No night label in the header; no "on every dancer", Music explanation, Steps how-to or Manual/Auto toggle
 - [ ] Steps reorder by dragging the ⋮⋮ handle (drop line shown, Esc cancels) and by Alt+↑ / Alt+↓
-- [ ] Intro: shown once a day; door opens on its own after ~1 s with light spilling out; greeting and Enter / ચાલો fade in; Enter rings a bell and zooms into the site; Skip and Esc always work; reduced motion shows it open and still; keyboard focus works throughout
+- [ ] Intro: shown on every page load and refresh; door opens on its own after ~1 s with light spilling out; greeting and Enter / ચાલો fade in; Enter rings a bell and zooms into the site; Skip and Esc always work; reduced motion shows it open and still; keyboard focus works throughout
 - [ ] Narrow-window message below 1024 px
 - **M7 Outfits — Deferred:** no checklist items in this version (spec kept in `docs/M7-outfits.md`).
 - [ ] Steps section shows Steps and Formations groups; both add into one sequence

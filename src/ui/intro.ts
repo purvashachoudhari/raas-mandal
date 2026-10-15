@@ -3,9 +3,8 @@ import { t } from "./i18n";
 
 // Intro (§5.14): a carved haveli door on black opens on its own, light spills out, and "ચાલો ગરબે
 // રમીએ" fades in with an Enter / ચાલો button that rings a temple bell and zooms through the doorway
-// into the site. Shown once a day per visitor; Skip always works; reduced motion shows it already open.
+// into the site. Shown on every page load; Skip always works; reduced motion shows it already open.
 
-const KEY = "raasMandal.introSeen.v1";
 /** Before the door opens, after the intro appears (ms). */
 const OPEN_AFTER = 1000;
 /** Door swing (ms); the CSS transition matches. */
@@ -13,13 +12,8 @@ const SWING = 1200;
 /** Zoom through the doorway into the site (ms); the CSS transition matches. */
 const ZOOM = 800;
 
-/** Local date as y-m-d. index.html's inline script uses the same format to hide the site until the intro is up. */
-function today(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-}
-
-/** The intro is for the laptop layout; narrow windows get the "open on a laptop" message instead. */
+/** The intro is for the laptop layout; narrow windows get the "open on a laptop" message instead.
+ * index.html's inline script uses the same 1024 px test to hide the site until the intro is up. */
 const narrow = () => window.innerWidth < 1024;
 
 // ---------- Drawing (SVG, in a 300 × 380 unit box) ----------
@@ -139,23 +133,12 @@ function frameSvg(): string {
 
 // ---------- Behaviour ----------
 
-/** Show the intro if it hasn't been seen today. The site keeps running underneath, hidden and inert. */
+/** Show the intro (on every page load). The site keeps running underneath, hidden and inert. */
 export function mountIntro() {
   const root = document.documentElement;
-  let seen = false;
-  try {
-    seen = localStorage.getItem(KEY) === today();
-  } catch {
-    // Storage unavailable: show it (it can always be skipped).
-  }
-  if (seen || narrow()) {
+  if (narrow()) {
     root.classList.remove("intro-pending");
     return;
-  }
-  try {
-    localStorage.setItem(KEY, today());
-  } catch {
-    // Storage unavailable: the intro shows again next time.
   }
 
   const s = t();
