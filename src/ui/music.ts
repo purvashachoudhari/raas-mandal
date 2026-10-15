@@ -77,14 +77,14 @@ export function mountMusic(panel: HTMLElement, store: Store, library: Library, p
   const sync = el(
     "div",
     { class: "beatfix", hidden: "" },
-    `<div class="fix-row">
+    `<div class="fix-row tempo-row">
        <label class="lbl" for="bpmInput"></label>
        <input id="bpmInput" class="bpm-input" type="number" inputmode="numeric" min="${MIN_BPM}" max="${MAX_BPM}" step="1">
        <span class="unit">bpm</span></div>
-     <div class="fix-row">
-       <button type="button" class="ghost tap" data-a="tap"></button>
-       <button type="button" class="mini" data-a="reset"></button></div>
-     <p class="note" data-o="hint"></p>`,
+     <div class="fix-row tap-row">
+       <button type="button" class="tap" data-a="tap"></button>
+       <button type="button" class="reset" data-a="reset"></button></div>
+     <p class="sync-hint" data-o="hint"></p>`,
   );
   const bpmInput = sync.querySelector<HTMLInputElement>("#bpmInput")!;
   const tapBtn = sync.querySelector<HTMLButtonElement>('[data-a="tap"]')!;
@@ -121,9 +121,8 @@ export function mountMusic(panel: HTMLElement, store: Store, library: Library, p
     hint.textContent =
       counting ? s.keepTapping
       : tapResult === "need-playing" ? s.needPlaying
-      : tapResult === "applied" ? s.syncedToTaps
       : synced ? s.syncedAt(Math.round(synced.bpm))
-      : s.notSyncedHint(MIN_TAPS);
+      : s.notSyncedHint;
   }
   session.subscribe(renderSync);
   player.subscribe(renderSync);
@@ -137,7 +136,9 @@ export function mountMusic(panel: HTMLElement, store: Store, library: Library, p
   );
   const npTitle = nowPlaying.querySelector<HTMLElement>(".np-title")!;
 
-  sec.append(ytForm, msg, nowPlaying, list, songError, preview, sync);
+  // Top to bottom: add a link, the songs, then for the selected song: Now playing (title + YouTube
+  // player), the play button and progress bar, and the tempo block.
+  sec.append(ytForm, msg, list, songError, nowPlaying, preview, sync);
   panel.append(sec);
 
   // A message is kept as a function of the strings, so it switches language with everything else.

@@ -157,22 +157,28 @@
 .icon-btn.small svg { width: 13px; height: 13px; }
 .icon-btn:disabled { opacity: .4; cursor: default; }
 
-/* Sync: tempo, Tap beat, Reset */
-.beatfix { display: grid; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--chip); }
-.fix-row { display: flex; align-items: center; gap: 6px; }
-.fix-row .lbl { font-size: 13px; min-width: 64px; }
-.fix-row .unit { font-size: 13px; color: var(--muted); }
+/* Sync: tempo, Tap beat, Reset. 16px padding, 12px between rows; controls are 44px tall. */
+.beatfix { display: grid; gap: 12px; padding: 16px; border-radius: 10px; background: var(--chip); }
+.fix-row { display: flex; align-items: center; }
+.tempo-row { gap: 8px; }
+.tempo-row .lbl { font-size: 13.5px; font-weight: 600; }
+.tempo-row .unit { font-size: 13.5px; color: var(--muted); }
+.tap-row { gap: 12px; }
 .bpm-input {
-  width: 64px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-  padding: 5px 8px 4px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: center;
+  box-sizing: border-box; width: 76px; height: 44px; padding: 0 8px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: center;
 }
 .bpm-input:focus { border-color: var(--accent); }
-.mini {
-  border: 1px solid var(--line); background: var(--chip); border-radius: 999px;
-  padding: 3px 10px 2px; font-size: 12.5px; font-weight: 600; white-space: nowrap;
+.tap-row button {
+  box-sizing: border-box; height: 44px; padding: 0 18px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--chip); font-size: 14px; font-weight: 600; white-space: nowrap;
 }
-.mini:disabled { opacity: .35; cursor: default; }
-.beatfix .tap { flex: 1; font-weight: 700; }
+.tap-row button:hover:not(:disabled) { border-color: var(--muted); }
+.tap-row .tap { flex: 1; font-weight: 700; }
+.tap-row button:disabled { opacity: .35; cursor: default; }
+/* One short line, smaller and muted. */
+.sync-hint { margin: 0; font-size: 12px; line-height: 1.3; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .sub-h { margin: 2px 0 -4px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .decors { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 6px; }

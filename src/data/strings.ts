@@ -131,12 +131,12 @@ const en = {
   reset: "Reset",
   resetTitle: "Clear this song's sync, back to 120 bpm",
   keepTapping: "Keep tapping on every beat…",
-  needPlaying: "Play the song first, then tap on every beat.",
-  syncedToTaps: "Synced to your taps. Keep tapping to refine it.",
+  needPlaying: "Play the song first, then tap",
   tapBeat: "Tap beat",
   tapBeatCount: (n: number, total: number) => `Tap beat · ${n} / ${total}`,
-  syncedAt: (bpm: number) => `Synced at ${bpm} bpm. Tap again any time to refine it, or type a new tempo.`,
-  notSyncedHint: (taps: number) => `Not synced yet: dancers keep a steady 120 bpm. Play the song, then tap on every beat (button or T key), starting on beat 1 of a bar. After ${taps} taps they lock on. Or type the tempo.`,
+  // Sync hints are one short line each.
+  syncedAt: (bpm: number) => `Synced at ${bpm} bpm · tap again to refine`,
+  notSyncedHint: "Not synced · play, then tap on each beat (or type the tempo)",
 
   // Steps
   stepsTitle: "Steps",
@@ -305,12 +305,11 @@ const gu: Strings = {
   reset: "મૂળ પ્રમાણે",
   resetTitle: "આ ગીતનો તાલ ભૂંસો, પાછું 120 bpm",
   keepTapping: "દરેક તાલ પર ટૅપ કરતા રહો…",
-  needPlaying: "પહેલાં ગીત ચલાવો, પછી દરેક તાલ પર ટૅપ કરો.",
-  syncedToTaps: "તમારા ટૅપ સાથે તાલ મળી ગયો. વધુ ચોક્કસ કરવા ટૅપ કરતા રહો.",
+  needPlaying: "પહેલાં ગીત ચલાવો, પછી ટૅપ કરો",
   tapBeat: "તાલ પર ટૅપ કરો",
   tapBeatCount: (n, total) => `તાલ પર ટૅપ · ${n} / ${total}`,
-  syncedAt: (bpm) => `${bpm} bpm પર તાલ મળ્યો. વધુ ચોક્કસ કરવા ગમે ત્યારે ફરી ટૅપ કરો, અથવા નવી લય લખો.`,
-  notSyncedHint: (taps) => `હજી તાલ મેળવ્યો નથી: ખેલૈયા 120 bpm પર રમે છે. ગીત ચલાવો, પછી તાલના પહેલા ઠેકાથી શરૂ કરીને દરેક તાલ પર ટૅપ કરો (બટન અથવા T કી). ${taps} ટૅપ પછી તાલ પકડાઈ જશે. અથવા લય લખો.`,
+  syncedAt: (bpm) => `${bpm} bpm પર તાલ મળ્યો · વધુ ચોક્કસ કરવા ફરી ટૅપ કરો`,
+  notSyncedHint: "તાલ નથી મળ્યો · ગીત ચલાવી દરેક તાલ પર ટૅપ કરો (અથવા લય લખો)",
 
   // Steps
   stepsTitle: "સ્ટેપ્સ",
