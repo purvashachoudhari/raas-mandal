@@ -50,7 +50,7 @@ export function mountCentre(panel: HTMLElement, store: Store) {
           const b = el(
             "button",
             { class: "centre decor", type: "button", "aria-pressed": String(pressed), "data-focus": `decor-${id}` },
-            `<span class="nm">${t().decors[id]}</span>`,
+            `<span class="nm">${t().decors[id].join("<br>")}</span>`,
           );
           b.onclick = () =>
             store.update((s) => {
@@ -61,7 +61,8 @@ export function mountCentre(panel: HTMLElement, store: Store) {
           decor.append(b);
         }
       });
-      decorNote.textContent = on.length ? t().decorOnNote : t().decorOffNote;
+      decorNote.textContent = on.length ? "" : t().decorOffNote;
+      decorNote.hidden = !!on.length;
     },
   );
 }

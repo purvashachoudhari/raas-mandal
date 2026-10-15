@@ -126,7 +126,7 @@ One print applies to **all dancers, men and women alike**. Prints render in the 
 - **Dhol stage:** two dhol drums whose sticks strike on the beat.
 - **Rangoli:** layered petal mandala in the night's palette, slowly rotating.
 
-**Between circles (toggle any, P1):** a row of diyas, a marigold garland ring, string lights that chase on the beat, or a rangoli border. Drawn in the gaps between circles without overlapping dancers.
+**Between circles (toggle any, P1):** a row of diyas, a marigold garland ring, string lights that chase on the beat, or a rangoli border. Drawn in the gaps between circles without overlapping dancers. Their buttons always have two-line labels, broken by hand (Diya / row, Marigold / garland, String / lights, Rangoli / border; દીવાની / હાર, ગલગોટાનું / તોરણ, લાઇટની / સેર, રંગોળીની / કિનાર), so all four are the same height. No note explains the lanes; with none selected, a short hint says to turn one on.
 
 ### 5.7 Music (P0)
 

@@ -78,7 +78,6 @@ const en = {
   inCentre: "In the centre",
   betweenCircles: "Between the circles",
   centreAria: "Centrepiece",
-  decorOnNote: "Decorations sit in their own lanes between the circles, so the dancers get a little smaller to make room.",
   decorOffNote: "Turn on any to decorate the gaps between the circles.",
   centres: {
     garbo: "Garbo",
@@ -89,12 +88,13 @@ const en = {
     dhol: "Dhol stage",
     rangoli: "Rangoli",
   } as Record<CentreId, string>,
+  // Decoration buttons: always two lines (line 1, line 2), so the buttons line up.
   decors: {
-    diyas: "Row of diyas",
-    garland: "Marigold garland",
-    lights: "String lights",
-    rangoliBorder: "Rangoli border",
-  } as Record<DecorId, string>,
+    diyas: ["Diya", "row"],
+    garland: ["Marigold", "garland"],
+    lights: ["String", "lights"],
+    rangoliBorder: ["Rangoli", "border"],
+  } as Record<DecorId, readonly [string, string]>,
 
   // Music
   musicTitle: "Music",
@@ -253,7 +253,6 @@ const gu: Strings = {
   inCentre: "વચ્ચે",
   betweenCircles: "ગોળની વચ્ચે",
   centreAria: "વચ્ચેનો શણગાર",
-  decorOnNote: "શણગાર ગોળની વચ્ચે પોતાની જગ્યામાં રહે છે, એટલે ખેલૈયા જગ્યા કરવા થોડા નાના થાય છે.",
   decorOffNote: "ગોળ વચ્ચેની જગ્યા શણગારવા કોઈ પણ પસંદ કરો.",
   centres: {
     garbo: "ગરબો",
@@ -265,10 +264,10 @@ const gu: Strings = {
     rangoli: "રંગોળી",
   },
   decors: {
-    diyas: "દીવા",
-    garland: "તોરણ",
-    lights: "લાઇટ",
-    rangoliBorder: "રંગોળી",
+    diyas: ["દીવાની", "હાર"],
+    garland: ["ગલગોટાનું", "તોરણ"],
+    lights: ["લાઇટની", "સેર"],
+    rangoliBorder: ["રંગોળીની", "કિનાર"],
   },
 
   // Music

@@ -175,7 +175,10 @@
 .beatfix .tap { flex: 1; font-weight: 700; }
 
 .sub-h { margin: 2px 0 -4px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.decors { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.decors { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 6px; }
+/* Decoration labels are always two lines, broken by hand; never wrapped, so every button is the same height. */
+.decor { align-content: center; }
+.decor .nm { white-space: nowrap; line-height: 1.2; }
 .steps-editor { display: grid; gap: 12px; }
 .lib-groups { display: grid; gap: 10px; }
 
