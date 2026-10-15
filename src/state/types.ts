@@ -4,7 +4,7 @@ export type Gender = "women" | "men" | "alternate";
 export type Direction = "cw" | "ccw";
 export type StepId =
   | "beTaali" | "tranTaali" | "dodhiyu" | "hinch" | "fudardi" | "dandiya"
-  | "popatiyu" | "sanedo" | "hudo" | "tippani"
+  | "popatiyu" | "sanedo" | "hudo" | "tippani" | "walk" | "handFlow"
   | "centreInOut" | "partnerSwap";
 export type CentreId = "garbo" | "jyot" | "mataji" | "mandvi" | "pillar" | "dhol" | "rangoli";
 export type DecorId = "diyas" | "garland" | "lights" | "rangoliBorder";
@@ -26,16 +26,5 @@ export interface Scene {
   centre: CentreId;
   betweenDecor: DecorId[];
   sequence: SequenceItem[];
-  choreography: "manual" | "auto";
   songId: string | null;
-}
-
-export interface BeatMap {
-  beats: number[]; // seconds
-  downbeats: number[]; // seconds
-  tempoCurve: { t: number; bpm: number }[];
-  bpm: number; // median
-  confidence: number; // 0–1
-  energy: number[]; // per-beat loudness, for auto choreography
-  version: number; // bump to invalidate cache
 }

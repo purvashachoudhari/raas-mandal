@@ -27,6 +27,8 @@ export const STEPS: Readonly<Record<StepId, StepDef>> = {
   sanedo: { id: "sanedo", group: "step", unitBeats: 4, travel: 1.0, defaultBars: 2 },
   hudo: { id: "hudo", group: "step", unitBeats: 4, travel: 0.5, defaultBars: 2, pairs: true },
   tippani: { id: "tippani", group: "step", unitBeats: 4, travel: 0.6, defaultBars: 2, prop: "tippani" },
+  walk: { id: "walk", group: "step", unitBeats: 4, travel: 0.8, defaultBars: 1 },
+  handFlow: { id: "handFlow", group: "step", unitBeats: 4, travel: 0, defaultBars: 1 },
   centreInOut: { id: "centreInOut", group: "formation", unitBeats: 8, travel: 0.2, defaultBars: 2 },
   partnerSwap: { id: "partnerSwap", group: "formation", unitBeats: 4, travel: 0.8, defaultBars: 1, pairs: true },
 };

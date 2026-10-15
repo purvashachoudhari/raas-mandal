@@ -20,7 +20,6 @@ export function defaultScene(): Scene {
     centre: "garbo",
     betweenDecor: [],
     sequence: DEFAULT_SEQUENCE.map((s) => ({ ...s })),
-    choreography: "manual",
     songId: null,
   };
 }
@@ -53,7 +52,6 @@ function sanitize(raw: unknown): Scene {
     centre: oneOf(CENTRE_IDS, r.centre, d.centre),
     betweenDecor: Array.isArray(r.betweenDecor) ? r.betweenDecor.filter((x) => DECOR_IDS.includes(x)) : d.betweenDecor,
     sequence,
-    choreography: r.choreography === "auto" ? "auto" : "manual",
     songId: typeof r.songId === "string" ? r.songId : null,
   };
 }

@@ -1,14 +1,12 @@
 import { MAX_BARS, STEPS, STEP_IDS, barStep } from "../data/steps";
 import type { Store } from "../state/store";
 import type { SequenceItem } from "../state/types";
-import { el, rebuild, revealInList, section, segmented } from "./dom";
+import { el, rebuild, section } from "./dom";
 import { localized, t, watchLocalized } from "./i18n";
 
 export interface StepsPanel {
-  /** Highlight the sequence item currently dancing (−1 for none), in whichever list is showing. */
+  /** Highlight the sequence item currently dancing (−1 for none). */
   setCurrent(index: number): void;
-  /** The auto choreography for the selected song, or null when there is no analysed song. */
-  setAuto(plan: readonly SequenceItem[] | null): void;
 }
 
 /** Move one item of a list to another index. */
@@ -19,26 +17,20 @@ function moveItem<T>(list: T[], from: number, to: number) {
 
 export function mountSteps(panel: HTMLElement, store: Store): StepsPanel {
   const sec = section((s) => s.stepsTitle);
-  const modeBox = el("div");
-  const manual = el("div", { class: "steps-manual" });
-  const auto = el("div", { class: "steps-auto" });
-  const autoNote = el("p", { class: "note" });
-  const planList = el("ol", { class: "seq plan" });
-  auto.append(autoNote, planList);
+  const editor = el("div", { class: "steps-editor" });
 
   // Library: dance steps and whole-circle formations, both adding into the same sequence.
   const lib = el("div", { class: "lib-groups" });
   const list = el("ol", { class: "seq" });
   // Announces keyboard moves to screen readers.
   const live = el("p", { class: "sr-only", "aria-live": "polite" });
-  manual.append(lib, list, live);
-  sec.append(modeBox, auto, manual);
+  editor.append(lib, list, live);
+  sec.append(editor);
   panel.append(sec);
 
   localized(() => {
     const s = t();
     live.textContent = ""; // an announcement from before the switch is in the old language
-    planList.setAttribute("aria-label", s.autoPlanAria);
     list.setAttribute("aria-label", s.sequenceAria);
     rebuild(lib, () => {
       for (const [group, title] of [["step", s.stepGroup], ["formation", s.formationGroup]] as const) {
@@ -55,47 +47,12 @@ export function mountSteps(panel: HTMLElement, store: Store): StepsPanel {
   });
 
   let current = -1;
-  let plan: readonly SequenceItem[] | null = null;
 
-  /** Auto with a plan shows the plan; otherwise the manual editor (also the fallback for Auto). */
-  function renderMode() {
-    const s = t();
-    const isAuto = store.get().choreography === "auto";
-    rebuild(modeBox, () => {
-      modeBox.append(
-        segmented(
-          [{ value: "manual", html: s.manual }, { value: "auto", html: s.auto }] as const,
-          isAuto ? "auto" : "manual",
-          "choreo",
-          (v) => store.update((d) => { d.choreography = v; }),
-          s.choreographyAria,
-        ),
-      );
-    });
-    auto.hidden = !isAuto;
-    manual.hidden = isAuto && !!plan;
-    autoNote.textContent = isAuto && plan ? s.autoPlanNote : "";
-    autoNote.hidden = !autoNote.textContent;
-    planList.hidden = !isAuto || !plan;
-    current = -1;
-  }
-
-  /** A step's name and feel, as shown in both lists. */
+  /** A step's name and feel. */
   const nameHtml = (item: SequenceItem) => {
     const st = t().steps[item.step];
     return `<span class="nm"><span class="main">${st.name}</span><br><span class="sub">${st.feel}</span></span>`;
   };
-
-  function renderPlan() {
-    planList.replaceChildren(
-      ...(plan ?? []).map((item, i) =>
-        el("li", {}, `<span class="n">${i + 1}</span>${nameHtml(item)}<span class="bars"><span>${t().bars(item.bars)}</span></span>`),
-      ),
-    );
-  }
-
-  watchLocalized(store, (s) => s.choreography, renderMode);
-  localized(renderPlan);
 
   const edit = (change: (seq: SequenceItem[]) => void) => store.update((d) => change(d.sequence));
 
@@ -221,14 +178,7 @@ export function mountSteps(panel: HTMLElement, store: Store): StepsPanel {
     setCurrent(index) {
       if (index === current) return;
       current = index;
-      const showing = planList.hidden ? list : planList;
-      [...showing.children].forEach((li, i) => li.classList.toggle("now", i === index));
-      if (showing === planList) revealInList(planList, planList.children[index]);
-    },
-    setAuto(next) {
-      plan = next && next.length ? next : null;
-      renderPlan();
-      renderMode();
+      [...list.children].forEach((li, i) => li.classList.toggle("now", i === index));
     },
   };
 }

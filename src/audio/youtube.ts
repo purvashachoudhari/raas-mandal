@@ -1,8 +1,7 @@
 import type { SongErrorKey } from "../data/strings";
-import type { Playback, PlayerEvent } from "./player";
 
-// YouTube songs (§5.7) play through the YouTube IFrame Player API. The player must stay visible,
-// so it lives in a small framed screen that main.ts positions over the stage or the Play panel.
+// Songs (§5.7) play through the YouTube IFrame Player API. The player must stay visible, so it
+// lives in a small framed screen that main.ts positions in the Music section or the Play mode corner.
 
 /** Accepts any YouTube link format (watch, youtu.be, shorts, embed, live, music, mobile) or a bare ID. */
 export function parseYouTubeId(input: string): string | null {
@@ -38,9 +37,25 @@ export function youtubeError(code: number): SongErrorKey {
 /** "replaced": a newer load (or an unload) took over before this one finished. */
 export type YouTubeLoad = { ok: true } | { ok: false; error: SongErrorKey | "replaced" };
 
-export interface YouTubePlayer extends Playback {
+export type PlayerEvent = "loading" | "ready" | "error" | "play" | "pause" | "seek" | "ended" | "unload";
+
+export interface YouTubePlayer {
   /** Cue a video (without playing). Resolves when it's ready or failed. */
   load(videoId: string): Promise<YouTubeLoad>;
+  unload(): void;
+  play(): void;
+  pause(): void;
+  toggle(): void;
+  seek(seconds: number): void;
+  /** Playback position in seconds: the clock everything animates from while a song is loaded. */
+  currentTime(): number;
+  /** The cued video's ID. */
+  readonly id: string | null;
+  readonly loaded: boolean;
+  readonly loading: boolean;
+  readonly playing: boolean;
+  readonly duration: number;
+  subscribe(fn: (event: PlayerEvent) => void): () => void;
   /** The video's title as YouTube reports it (empty until known). */
   title(): string;
   /** Why the current video failed, if it did. */

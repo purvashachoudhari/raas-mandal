@@ -1,5 +1,5 @@
-import type { BeatGrid } from "../analysis/corrections";
-import type { Playback } from "./player";
+import type { BeatGrid } from "./tapSync";
+import type { YouTubePlayer } from "./youtube";
 
 export interface BeatClock {
   /** Current beat position (beat index + fraction): drives every pulse, clap and hop. */
@@ -17,7 +17,7 @@ export interface BeatClock {
   restart(): void;
 }
 
-/** Fixed tempo used while a song's beats are still being analysed (or a YouTube song isn't tap-synced yet). */
+/** Default tempo while a song isn't synced yet (no taps or typed tempo). */
 export const PREVIEW_BPM = 120;
 
 /** Index of the last beat at or before t (−1 if before the first). */
@@ -54,10 +54,10 @@ function localBpm(beats: number[], pos: number): number {
 }
 
 /**
- * The one clock while a song is loaded: the song's playback position, mapped to the detected
- * beats when the analysis is ready, or to a steady preview tempo until then.
+ * The one clock while a song is loaded: the song's playback position, mapped to its synced beats,
+ * or to the default 120 bpm until it's synced.
  */
-export function createSongClock(player: Playback, grid: () => BeatGrid | null): BeatClock {
+export function createSongClock(player: YouTubePlayer, grid: () => BeatGrid | null): BeatClock {
   const position = () => {
     const g = grid();
     const t = player.currentTime();

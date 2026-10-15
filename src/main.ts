@@ -5,16 +5,13 @@ import "./styles/play.css";
 
 import { createSongClock } from "./audio/beatClock";
 import { createLibrary } from "./audio/library";
-import { createMedia } from "./audio/media";
-import { createPlayer } from "./audio/player";
-import { createYouTubePlayer } from "./audio/youtube";
 import { createSongSession } from "./audio/session";
+import { createYouTubePlayer } from "./audio/youtube";
 import { themeFor } from "./data/nights";
 import type { Lang, Strings } from "./data/strings";
-import { autoSequence, barEnergies } from "./state/choreography";
 import { sequenceAt } from "./state/sequence";
 import { createStore } from "./state/store";
-import type { Scene, SequenceItem } from "./state/types";
+import type { SequenceItem } from "./state/types";
 import type { Rect } from "./stage/layout";
 import { createRenderer, type Motion } from "./stage/renderer";
 import { mountArrangement } from "./ui/arrangement";
@@ -32,22 +29,20 @@ import { applyTheme } from "./ui/theme";
 
 const store = createStore();
 const library = createLibrary();
-const player = createPlayer();
-const youtube = createYouTubePlayer(byId("ytFrame"));
-/** Both song sources behind one interface: files (Web Audio) and YouTube (IFrame player). */
-const media = createMedia(player, youtube);
-const session = createSongSession(library, player, youtube, media);
-/** One clock: the song's playback position, mapped to its detected beats. */
-const clock = createSongClock(media, () => session.grid());
+/** Songs play from YouTube (§5.7). */
+const player = createYouTubePlayer(byId("ytFrame"));
+const session = createSongSession(library, player);
+/** One clock: the song's playback position, mapped to its synced beats. */
+const clock = createSongClock(player, () => session.grid());
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
-const songSelected = () => media.loaded || media.loading;
+const songSelected = () => player.loaded || player.loading;
 
 // ---------- Motion ----------
 // The dancers only dance while a song plays. A started song that's paused freezes them in place;
 // once it ends or is stopped (or no song is selected) they ease back to the resting pose.
 let songStarted = false;
-media.subscribe((e) => {
+player.subscribe((e) => {
   if (e === "play") songStarted = true;
   else if (e === "ended" || e === "unload" || e === "error") songStarted = false;
 });
@@ -60,7 +55,7 @@ mountCircles(panel, store);
 mountDirection(panel, store);
 mountArrangement(panel, store);
 mountCentre(panel, store);
-const music = mountMusic(panel, store, library, media, session);
+const music = mountMusic(panel, store, library, player, session);
 const steps = mountSteps(panel, store);
 
 store.watch((s) => s.night, (n) => applyTheme(themeFor(n)));
@@ -90,49 +85,15 @@ localized(() => {
   shownStep = undefined; // re-render the current step's name
 });
 
-// ---------- Choreography ----------
-// Auto: a plan from the analysed song's energy, rebuilt when the song or its beat corrections change.
-let autoPlan: SequenceItem[] | null = null;
-session.subscribe(() => {
-  const map = session.map, grid = session.grid();
-  const plan = map && grid ? autoSequence(barEnergies(map, grid)) : null;
-  autoPlan = plan && plan.length ? plan : null;
-  steps.setAuto(autoPlan);
-});
-
-/** The sequence the dancers perform: the auto plan when there is one, else the manual sequence. */
-const activeSequence = (scene: Readonly<Scene>): readonly SequenceItem[] =>
-  scene.choreography === "auto" && autoPlan ? autoPlan : scene.sequence;
-
 // ---------- Songs ----------
-// Selecting a song loads it and analyses its beats (or reads the cached analysis).
-store.watch((s) => s.songId, (id) => void session.select(id));
-
-void library.loadManifest().then(() => {
-  void session.restoreStatuses();
+// The last song comes back on reload, unless it's gone (a removed link, or a local file saved
+// before songs became YouTube-only).
+{
   const id = store.get().songId;
-  // A song dropped in an earlier session is gone after reload.
   if (id && !library.find(id)) store.update((d) => { d.songId = null; });
-  else void session.select(id);
-});
-
-// Drop songs anywhere on the page.
-const hasFiles = (e: DragEvent) => !!e.dataTransfer && [...e.dataTransfer.types].includes("Files");
-window.addEventListener("dragover", (e) => {
-  if (!hasFiles(e)) return;
-  e.preventDefault();
-  e.dataTransfer!.dropEffect = "copy";
-  document.body.classList.add("dragging");
-});
-window.addEventListener("dragleave", (e) => {
-  if (!e.relatedTarget) document.body.classList.remove("dragging");
-});
-window.addEventListener("drop", (e) => {
-  if (!hasFiles(e)) return;
-  e.preventDefault();
-  document.body.classList.remove("dragging");
-  music.addFiles(e.dataTransfer!.files);
-});
+}
+// Selecting a song cues it on YouTube.
+store.watch((s) => s.songId, (id) => void session.select(id));
 
 // ---------- Modes ----------
 let mode: "build" | "play" = "build";
@@ -141,7 +102,7 @@ const playPanel = mountPlayPanel(byId("playPanel"), {
   onTogglePause: togglePause,
   onRestart: restart,
   onExit: exitPlay,
-  onSeek: (t) => media.seek(t),
+  onSeek: (t) => player.seek(t),
 });
 
 function enterPlay() {
@@ -152,8 +113,8 @@ function enterPlay() {
   mode = "play";
   document.body.classList.add("playing");
   enterFullscreen();
-  media.seek(0);
-  media.play();
+  player.seek(0);
+  player.play();
   playPanel.show();
   // The header's Play button is hidden now: keep keyboard focus in Play mode, on the panel itself.
   byId("playPanel").focus({ preventScroll: true });
@@ -163,7 +124,7 @@ function enterPlay() {
 function exitPlay() {
   mode = "build";
   document.body.classList.remove("playing", "idle");
-  media.pause();
+  player.pause();
   songStarted = false; // leaving Play mode stops the song: the dancers ease back to rest
   if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
   playPanel.hide();
@@ -183,7 +144,7 @@ function restart() {
 }
 
 function seekBy(seconds: number) {
-  if (media.loaded) media.seek(media.currentTime() + seconds);
+  if (player.loaded) player.seek(player.currentTime() + seconds);
   wake();
 }
 
@@ -263,7 +224,7 @@ function placeYouTubeScreen() {
   const slot = document.getElementById("ytSlot");
   let r: { left: number; top: number; width: number; height: number } | null = null;
   let clip = "none";
-  if (session.source === "youtube" && !session.error) {
+  if (session.songId && !session.error) {
     if (mode === "play") {
       const { w, h, margin } = PLAY_SCREEN;
       r = { left: window.innerWidth - w - margin, top: window.innerHeight - h - margin, width: w, height: h };
@@ -286,7 +247,7 @@ function placeYouTubeScreen() {
   if (r) Object.assign(ytScreen.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, clipPath: clip });
 }
 
-// T taps the beat in either mode: tap-to-sync for YouTube songs, tap to correct for analysed files.
+// T taps the beat in either mode (tap-to-sync, §5.8).
 document.addEventListener("keydown", (e) => {
   if ((e.key !== "t" && e.key !== "T") || e.metaKey || e.ctrlKey || e.altKey) return;
   if ((e.target as HTMLElement).closest("input, textarea, select")) return;
@@ -318,14 +279,14 @@ function tick() {
   const flick = resting && !reduceMotion.matches ? (performance.now() / 1000) * REST_FLICKER : beat;
 
   placeYouTubeScreen(); // every frame: the slot moves with panel scrolling, list changes and resizes
-  const sequence = activeSequence(scene);
+  const sequence = scene.sequence;
   if (sequence !== shownSequence) {
     shownSequence = sequence;
     playPanel.setSequence(sequence);
   }
 
   renderer.draw({
-    scene: sequence === scene.sequence ? scene : { ...scene, sequence: sequence as SequenceItem[] },
+    scene,
     beat,
     stepBeat,
     bpm: clock.bpm(),
@@ -341,9 +302,9 @@ function tick() {
   steps.setCurrent(pos?.index ?? -1);
   music.tick();
   if (mode === "play") {
-    const song = media.loaded ? library.find(store.get().songId) : undefined;
+    const song = player.loaded ? library.find(store.get().songId) : undefined;
     const waiting = !resting && stepBeat === null && sequence.length > 0;
-    playPanel.update(pos, clock.paused, song ? { title: song.title, time: media.currentTime(), duration: media.duration } : null, waiting);
+    playPanel.update(pos, clock.paused, song ? { title: song.title, time: player.currentTime(), duration: player.duration } : null, waiting);
   } else if ((pos?.step ?? null) !== shownStep) {
     shownStep = pos?.step ?? null;
     const st = pos ? t().steps[pos.step] : null;

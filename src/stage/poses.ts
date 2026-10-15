@@ -21,6 +21,10 @@ export interface Pose {
   reach: number; // hands reaching to the partner
   reachX: number; // direction to the partner in local units (unit vector)
   reachY: number;
+  armSwing: number; // −1…1, one hand swung forward and the other back, at the sides (walking)
+  armLift: number; // −1…1, one arm raised higher and the other lower
+  wrist: number; // 0–1, size of the small circles the hands trace
+  wristPhase: number; // angle of the hands round those circles, radians
   // Tippani:
   strike: number; // 0–1, stick bent down onto the ground
   dust: number; // 0–1 time since the last strike (dust ring grows and fades), −1 for none
@@ -34,7 +38,7 @@ export interface Pose {
 
 const REST: Pose = {
   arms: 0.2, flare: 1, selfRot: 0, radial: 0, tang: 0, sway: 0, squash: 1, scale: 1, flash: 0, prop: null,
-  fwd: 0, armsSide: 0, reach: 0, reachX: 0, reachY: 0, strike: 0, dust: -1,
+  fwd: 0, armsSide: 0, reach: 0, reachX: 0, reachY: 0, armSwing: 0, armLift: 0, wrist: 0, wristPhase: 0, strike: 0, dust: -1,
   pairOffset: 0, partnerClap: 0, orbit: 0, gather: 0,
 };
 
@@ -158,6 +162,25 @@ export function pose(step: StepId | null, lb: number, j: number): Pose {
       p.squash = 1 - 0.05 * hit;
       p.dust = f;
       p.sway = 0.08 * Math.sin((Math.PI * lb) / 2);
+      break;
+    }
+    case "walk": {
+      // An easy walk round the circle: a light step down on every beat, arms swinging gently at the
+      // sides (one forward, one back, swapping each beat). No claps.
+      const step = Math.sin(Math.PI * f);
+      p.squash = 1 - 0.05 * (1 - step);
+      p.arms = 0.08;
+      p.armSwing = Math.cos(Math.PI * lb);
+      p.flare = 1.04;
+      break;
+    }
+    case "handFlow": {
+      // Standing still (the circle stops; no sway or turning): only the arms move. One arm rises
+      // as the other lowers, alternating on each beat, while the wrists circle.
+      p.arms = 0.45;
+      p.armLift = Math.cos(Math.PI * lb);
+      p.wrist = 1;
+      p.wristPhase = TAU * lb;
       break;
     }
     case "centreInOut": {

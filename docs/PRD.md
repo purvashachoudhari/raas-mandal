@@ -9,19 +9,20 @@
 
 ## 1. Summary
 
-Raas Mandal (રાસ મંડળ) is a laptop web app for people who are away from home during Navratri. You build your own garba ground: pick the Navratri night, dress the dancers in that night's colour and a Gujarati print, choose how many circles dance and which way they move, set what sits in the centre, choose a song from your own music files, and arrange the steps. Press play and the circles dance to the song, with every clap, hop and spin landing on the song's real beats through automatic beat detection.
+Raas Mandal (રાસ મંડળ) is a laptop web app for people who are away from home during Navratri. You build your own garba ground: pick the Navratri night, dress the dancers in that night's colour and a Gujarati print, choose how many circles dance and which way they move, set what sits in the centre, pick a song from YouTube, and arrange the steps. Press play and the circles dance to the song, with every clap, hop and spin landing on its beat, set by tapping along or typing the tempo.
 
 ## 2. Goals and non-goals
 
 ### Goals
 1. Feel like a real garba night: authentic colours, prints, steps and festive elements.
-2. Dancers move on the actual beat of any song file the user adds, without manual tapping.
-3. A clean, modular codebase where the scene settings, the renderer, the audio engine and the beat analysis are independent.
+2. Dancers move on the beat of any YouTube song, set with a few taps (or a typed tempo).
+3. A clean, modular codebase where the scene settings, the renderer and the audio engine are independent.
 4. Runs entirely in the browser. No backend, no accounts.
 
 ### Non-goals (this version)
 - Phone or tablet layouts.
-- Streaming services other than YouTube (for example Spotify). YouTube is supported as a song source (§5.7).
+- Song sources other than YouTube: no local files and no other streaming services (§5.7).
+- Automatic beat detection and auto choreography (both needed local files; removed in M9).
 - Accounts, cloud saving, multiplayer or shared live rooms.
 - Angled 2.5D or 3D views (the renderer must make these possible later, see §9).
 - Per-circle step sequences.
@@ -29,7 +30,7 @@ Raas Mandal (રાસ મંડળ) is a laptop web app for people who are away
 ## 3. Users and context
 
 - **Primary user:** the owner, a Gujarati/Indian student abroad missing garba, using a laptop in a dorm or apartment.
-- **Secondary users:** friends and family who open the deployed site on their laptops and add their own music files.
+- **Secondary users:** friends and family who open the deployed site on their laptops and add their own YouTube links.
 - **Usage moment:** evenings during the nine nights; often on a large screen or projected, with music on speakers.
 
 ## 4. Experience overview
@@ -44,7 +45,7 @@ The header holds the logo, the **EN | ગુ** language toggle (§5.13) and the 
 **Primary flow**
 1. Open the app. It opens on tonight's Navratri night (by date), or Night 1 outside the festival.
 2. Adjust the scene top to bottom in the left panel (order in §5).
-3. Select a song. Beat analysis runs once (progress shown), then the song is marked ready.
+3. Select a song. If it isn't synced yet, play it and tap along (or type its tempo) once; the sync is saved for that song.
 4. Press **Play garba**. Full-screen dance begins on the first downbeat. With no song selected, the app says "Pick a song to start the garba" and stays in Build mode.
 5. Press Esc or **Back to build** to return. All settings persist on reload.
 
@@ -127,53 +128,35 @@ One print applies to **all dancers, men and women alike**. Prints render in the 
 
 ### 5.7 Music (P0)
 
-Two song sources share one song list: **local files** and **YouTube**. Each song shows a small badge, **File** or **YouTube**.
+Songs come from **YouTube only**. The Music section holds the **Add YouTube link** box, the **Now playing** box, the song list, preview controls and the sync box (§5.8). There is no file drop zone or file picker, and no badge before song names.
 
-**Local files**
-- Songs live as audio files in the project's `music/` folder (`.mp3`, `.m4a`, `.wav`, `.ogg`). `music/` stays git-ignored, so song files are never committed or published.
-- `npm run music` scans the folder and writes `music/manifest.json` (title from file tags or filename, duration).
-- The app also accepts files by **drag and drop** or a file picker at runtime. Dropped files last until the page is reloaded.
-- Status: *Not analysed*, *Analysing 40%*, *Ready · 132 bpm*, or *Couldn't analyse*.
-
-**YouTube**
-- A starter list of YouTube songs (title, artist, video ID) ships with the site in `src/data/youtubeSongs.ts`, so public visitors have songs ready without their own files.
-- An **Add YouTube link** box accepts any YouTube URL format (watch, youtu.be, shorts, embed, live, mobile and music links, with or without extra parameters) or a bare 11-character video ID. Invalid links get a clear message. Added links are kept in `localStorage` and can be removed; a user-added video takes its real title once it plays.
-- Playback uses the **YouTube IFrame Player API** (privacy-enhanced `youtube-nocookie.com` host). YouTube requires the player to stay visible, so it never sits over the garba ground. In Build mode it has one fixed spot in the Music section: a **Now playing** box between the Add YouTube link box and the song list, showing the song title and the player at full panel width and 16:9 (at least 200 px tall). The box stays in that place whichever song is selected and scrolls with the panel like any other content. In Play mode it sits in the bottom-right corner at 356×200 px with a 16 px margin, and the ground (edge lights included) keeps at least 12 px clear of it: the ground moves left first, as far as its margin allows, and shrinks only if that isn't enough. It stays visible when the Play panel auto-hides. Switching modes only repositions it; the video doesn't reload. Only YouTube songs show the player; local files don't.
-- Status: *Not synced yet* or *Synced · 124 bpm* (see §5.8), *Loading…*, or *Can't play here*.
+- A starter list of YouTube songs (title, artist, video ID) ships with the site in `src/data/youtubeSongs.ts`, so visitors have songs ready.
+- The **Add YouTube link** box accepts any YouTube URL format (watch, youtu.be, shorts, embed, live, mobile and music links, with or without extra parameters) or a bare 11-character video ID. Invalid links get a clear message. Added links are kept in `localStorage` and can be removed; a user-added video takes its real title once it plays.
+- Playback uses the **YouTube IFrame Player API** (privacy-enhanced `youtube-nocookie.com` host). YouTube requires the player to stay visible, so it never sits over the garba ground. In Build mode it has one fixed spot in the Music section: a **Now playing** box between the Add YouTube link box and the song list, showing the song title and the player at full panel width and 16:9 (at least 200 px tall). The box stays in that place whichever song is selected and scrolls with the panel like any other content. In Play mode it sits in the bottom-right corner at 356×200 px with a 16 px margin, and the ground (edge lights included) keeps at least 12 px clear of it: the ground moves left first, as far as its margin allows, and shrinks only if that isn't enough. It stays visible when the Play panel auto-hides. Switching modes only repositions it; the video doesn't reload.
+- Each song row shows title, then artist · duration · status: *Not synced yet*, *Synced · 124 bpm*, *Loading…*, or *Can't play here*.
 - Errors: if a video blocks embedding (error 101, 150 or 153) the app shows "This video's owner doesn't allow it to play on other sites. Try a different upload." Unavailable videos and YouTube failing to load get their own messages.
+- Selecting a song makes it the active song (only one at a time) and cues it. Preview controls in Build mode (play/pause, scrub); full playback in Play mode.
+- A last song saved before songs became YouTube-only (a local file) is dropped on reload.
+- `music/` stays in `.gitignore`, so personal song files kept there are never committed or published.
 
-- The Music section has no general explanation paragraph; only the empty-list hint (how to add songs) remains.
+### 5.8 Beat sync (P0)
 
-**Both sources**
-- Selecting a song makes it the active song (only one at a time): a local file starts analysis if needed; a YouTube video is cued.
-- Playback: preview controls in Build mode (play/pause, scrub); full playback in Play mode. Play/pause, scrubbing, keyboard controls and the auto-hiding panel work the same for both sources.
-- No synth dhol is required in this version; the prototype's synth may remain as a fallback when no song is selected (P2).
+The dancers follow the song's beat through one beat clock (§8): song time → beat position. YouTube audio can't be analysed, so the beat comes from the user. The sync box has exactly three controls:
 
-### 5.8 Beat matching (P0)
+1. **Tempo:** the bpm number, editable by typing (applied on Enter or leaving the field; 40–260, whole numbers). Typing a tempo keeps the current timing; for a song never synced, the beat starts at the beginning of the song.
+2. **Tap beat:** while the song plays, tap (button, or the **T** key in either mode) on every beat, starting on beat 1 of a bar. After **4 or more taps**, tempo and timing are fitted with a **least-squares line** through the tap times (each tap numbered by the nearest whole beat, so a missed beat doesn't skew it). Further taps refine the fit; a pause of more than 2.5 s starts a new set. Tapping while the song isn't playing says to play it first.
+3. **Reset:** clears the saved sync for that song, back to the default **120 bpm** (disabled when there's nothing to clear).
 
-The dancers follow the song's beats through one beat clock (§8): song time → beat position. How the beats are found depends on the source.
-
-**Local files: automatic beat matching.** When a file is selected the app detects its beats, downbeats and tempo changes. Full spec in §8.
-
-- Runs in a Web Worker so the UI stays responsive; shows progress.
-- Results cached per file, so a song is analysed once.
-- Handles garba's usual **speed-up within a song** (tempo curve, not one fixed BPM).
-- Manual corrections available but optional: nudge the beat earlier/later (±10 ms steps), halve or double the tempo, and **Tap to correct** (tap 8 beats to re-fit the phase).
-- **Acceptance:** on the test set (§12), at least 90% of detected beats fall within ±70 ms of hand-marked beats, and step changes land on downbeats.
-
-**YouTube: tap-to-sync.** YouTube audio can't be analysed, so the user sets the beat by tapping along.
-
-- While the song plays, the user presses **Tap beat** (button, or the **T** key in either mode) on every beat, starting on beat 1 of a bar. After **4 or more taps**, tempo and phase are fitted with a **least-squares line** through the tap times (each tap numbered by the nearest whole beat, so a missed beat doesn't skew it). Further taps refine the fit; a pause of more than 2.5 s starts a new set.
-- The fit becomes an even beat grid, so the beat clock, downbeat-aligned step changes, pre-roll and Play mode behave exactly as for analysed files. The sequence starts on the bar line in step with the first tap.
+- A one-line hint under the controls shows the tap count, the result, or how to sync.
+- The sync becomes an even beat grid, so downbeat-aligned step changes and Play mode follow it. The sequence starts on the bar line in step with the sync's timing.
 - The beat clock reads the player's current time, **smoothed between YouTube's coarse updates** (extrapolated from the last reading and gently pulled towards each new one; a seek is trusted until YouTube reports the new position).
-- Tools: nudge earlier/later (±10 ms), **½×** and **2×** tempo, and Reset.
-- Saved per video in `localStorage` (tempo, phase and nudge), so a song is synced once per browser.
-- Before syncing, the dancers dance at a default **120 bpm** while the song plays.
-- Auto choreography (§5.9) needs an analysed file's energy curve; with a YouTube song the manual sequence plays.
+- Saved per video in `localStorage` (tempo and timing), so a song is synced once per browser. Syncs saved with the old nudge control keep working (the nudge is folded into the timing).
+- Before syncing, the dancers dance at the default **120 bpm** while the song plays.
+- There are no other sync controls (no nudge, no ½× / 2×, no beat-timing readout).
 
 ### 5.9 Steps (P0)
 
-A preset library of ten steps and two whole-circle formations. The user arranges them into one sequence that every circle performs together; the sequence loops for the length of the song. Every move follows the same rules: poses are pure functions of `(step, beatPosInStep, dancerIndex)`, all motion is driven by the beat clock (§8), step changes snap to downbeats, and moves blend over the first quarter-beat.
+A preset library of twelve steps and two whole-circle formations. The user arranges them into one sequence that every circle performs together; the sequence loops for the length of the song. Every move follows the same rules: poses are pure functions of `(step, beatPosInStep, dancerIndex)`, all motion is driven by the beat clock (§8), step changes snap to downbeats, and moves blend over the first quarter-beat.
 
 **Steps** (સ્ટેપ્સ)
 
@@ -189,6 +172,8 @@ A preset library of ten steps and two whole-circle formations. The user arranges
 | Sanedo | સનેડો | Kutchi bounce | 1 bar | 1.0 | Bouncy Kutchi folk step. A bounce on every beat; arms swing together to one side and then the other on alternate beats; a quick shoulder shake (small rapid sway) on each off-beat. |
 | Hudo | હુડો | Partner claps | 1 bar | 0.5 | Dancers pair up with their neighbour (even/odd index) and turn to face each other, as in Dandiya. Beats 1 and 3: each dancer claps their own hands. Beats 2 and 4: partners clap each other's palms, hands meeting in the space between them with a clap spark there. Partners switch sides every 2 bars. |
 | Tippani | ટિપ્પણી | Stick strikes | 1 bar | 0.6 | Traditional Saurashtra step with a tippani: a long stick with a small wooden block at the end. Each dancer holds it in both hands and strikes the ground just in front of them on every beat, bending forward on the strike. Each strike shows a small dust ring at the block. The stick is a new prop (wood colour with an accent band). |
+| Walk | ચાલ | Easy steps | 1 bar | 0.8 | An easy step for beginners. Dancers simply walk forward round the circle, a light step down on every beat, arms low and swinging gently at their sides (one forward, one back, swapping each beat). No claps. The circle rotates at a steady, relaxed speed. |
+| Hand flow | હાથની લહેર | Arms only | 1 bar | 0 | The circle stops rotating and dancers stand in place with no body sway or turning; only the arms move. One arm rises as the other lowers, alternating left and right on each beat, while the wrists circle (one turn per beat). |
 
 **Formations** (રચના)
 
@@ -199,16 +184,11 @@ A preset library of ten steps and two whole-circle formations. The user arranges
 
 - Hudo and Partner swap need an even dancer count per circle, which the layout already guarantees (§5.3).
 - Props: Dandiya sticks and the tippani appear only while their step is active, then disappear.
+- Walk and Hand flow blend with every other step like the rest: pose values mix over the first quarter-beat, and the circle's speed eases (Hand flow eases it to a stop, the next travelling step eases it back up).
 - Each circle's swap offset is the number of partner swaps completed so far, derived from the sequence position, so it stays correct through loops and after scrubbing.
 - Sequence editor: the step library is split into **Steps** and **Formations** groups; both add into the **same sequence**, so a formation can sit between steps (for example Be Taali 2 bars → Into the centre & out → Dodhiyu 4 bars). Remove, set length in bars (1 to 16; formations longer than one bar change length in whole repeats), and **reorder by drag and drop**: each row has a drag handle (⋮⋮); the dragged row dims in place and an accent line shows where it will drop; Esc cancels the drag. For keyboard users, Alt+↑ / Alt+↓ moves the focused row (focus stays on the moved row and screen readers hear its new position).
-- The Steps section carries no helper text: no explanation of how the sequence works, and none of Auto's fallback (Auto with no analysed song simply shows the manual sequence, which is what plays). With an auto plan, one line says how steps follow the song's energy.
+- The Steps section carries no helper text and no Manual/Auto toggle: the sequence always plays as arranged.
 - Default sequence: Be Taali 2 bars → Tran Taali 2 → Hinch 2 → Dodhiyu 4 → Fudardi 1 → Dandiya 2.
-- **Auto choreography (P1):** picks steps from the song's energy curve:
-  - Low energy: Hinch, Be Taali, Popatiyu
-  - Medium energy: Tran Taali, Hudo, Tippani
-  - High energy: Dodhiyu, Sanedo, Dandiya
-  - Section changes: Fudardi or Into the centre & out
-  - End of a long phrase (every 8 bars in one energy level): Partner swap
 - Steps blend into each other over the first quarter-beat to avoid pops.
 
 ### 5.10 Play mode (P0)
@@ -227,7 +207,7 @@ A preset library of ten steps and two whole-circle formations. The user arranges
 ### 5.11 Persistence (P0)
 
 - Scene settings (night, print, circles, directions, arrangements, festive elements, sequence, last song) saved to `localStorage` on every change.
-- Beat analysis results saved in IndexedDB, keyed by a hash of the file.
+- Per-song syncs (§5.8), added YouTube links and the language (§5.13) are also kept in `localStorage`.
 - No accounts, no server.
 
 ### 5.12 When the dancers move (P0)
@@ -235,7 +215,7 @@ A preset library of ten steps and two whole-circle formations. The user arranges
 The dancers only dance while a song is actually playing.
 
 - **At rest** (on page load, and whenever no song is playing): the dancers stand still in a neutral resting pose (arms relaxed, holding the first step's props) and the circles don't rotate. Every setting (night, print, circles, direction, arrangement, centrepiece, steps) still updates this still preview instantly.
-- **Start:** dancers and circles start moving when a song starts playing, for local files and YouTube songs alike, whether it's started from the song list's preview controls, the YouTube player, or Play mode. They ease in from the resting pose.
+- **Start:** dancers and circles start moving when a song starts playing, whether it's started from the song list's preview controls, the YouTube player, or Play mode. They ease in from the resting pose.
 - **Pause:** pausing the song freezes everything in place, mid-pose. Resuming carries on from the same spot. Scrubbing while paused shows the pose at the new position.
 - **End or stop:** when the song ends, a different song is selected, or Play mode is left with **Back to build** or Esc (which stops the song), the dancers ease back to the resting pose over a second or two and the circles slow to a stop.
 - **Beat-driven effects** (edge lights chasing, centre twinkles, garbo glow pulses, abhla mirror glints, dhol strikes, slowly turning centrepieces) only animate while the song plays, and freeze with the dancers. Diya and lamp flames keep a gentle flicker at rest.
@@ -256,21 +236,20 @@ The dancers only dance while a song is actually playing.
 
 - **Look:** flat folk-art illustration seen from above. Dancers face the centre, heads outward, arms raised.
 - **Typography:** Baloo Bhai 2 (display, Gujarati and Latin) and Hind Vadodara (body). Text is in one language at a time (§5.13), never Gujarati and English side by side; only the logo is bilingual.
-- **Panel:** 400 px fixed left column, section headers in the chosen language, themed from the night tokens. No helper paragraphs beyond what a control needs (for example the beat-correction hints).
+- **Panel:** 400 px fixed left column, section headers in the chosen language, themed from the night tokens. No helper paragraphs beyond what a control needs (for example the sync hint).
 - **Stage:** background colour with a soft centre glow, faint guide circles, a ring of edge lights that chase on the beat.
 - **Motion:** everything that pulses (garbo holes, lights, clap sparks, mirror glints) is driven by the beat clock, never by wall-clock timers.
 - **Laptop only:** designed for 1280×720 and up. Below 1024 px wide, show a friendly "Open Raas Mandal on a laptop" screen.
 
 ## 7. Technical architecture
 
-**Stack:** Vite + TypeScript, Canvas 2D, Web Audio API, Web Workers, IndexedDB (via `idb-keyval`). No UI framework; small DOM modules per panel section. Deployed to GitHub Pages via a GitHub Actions workflow.
+**Stack:** Vite + TypeScript, Canvas 2D, YouTube IFrame Player API. No runtime dependencies and no UI framework; small DOM modules per panel section. Deployed to GitHub Pages via a GitHub Actions workflow.
 
 ```
 raas-mandal/
 ├── index.html
 ├── docs/PRD.md
-├── music/                    # local songs (git-ignored) + manifest.json
-├── scripts/build-manifest.ts # npm run music
+├── music/                    # personal song files, git-ignored (not used by the app)
 └── src/
     ├── main.ts               # boot, mode switching
     ├── state/
@@ -292,18 +271,11 @@ raas-mandal/
     │   ├── patterns/         # bandhani.ts, patola.ts, ajrakh.ts, abhla.ts
     │   └── festive/          # centrepieces and between-circle decor
     ├── audio/
-    │   ├── library.ts        # manifest, drag-drop files, YouTube songs
-    │   ├── media.ts          # one playback interface over files and YouTube
-    │   ├── youtube.ts        # IFrame Player API, link parsing, error messages
-    │   ├── tapSync.ts        # YouTube tap-to-sync: least-squares fit, beat grid, storage
-    │   ├── player.ts         # decode, play, seek, clock
-    │   └── beatClock.ts      # audio time → beat position
-    ├── analysis/
-    │   ├── worker.ts         # runs the pipeline off the main thread
-    │   ├── onset.ts
-    │   ├── tempo.ts
-    │   ├── beatTrack.ts
-    │   └── cache.ts
+    │   ├── library.ts        # starter songs + added YouTube links
+    │   ├── youtube.ts        # IFrame Player API, link parsing, error keys
+    │   ├── session.ts        # selected song, its sync: tap, typed tempo, reset
+    │   ├── tapSync.ts        # least-squares tap fit, beat grid, per-video storage
+    │   └── beatClock.ts      # song time → beat position
     └── styles/               # tokens.css, panel.css, stage.css, play.css
 ```
 
@@ -315,12 +287,11 @@ type Direction = "cw" | "ccw";
 interface Circle { arrangement: Gender; direction: Direction }
 type StepId =
   | "beTaali" | "tranTaali" | "dodhiyu" | "hinch" | "fudardi" | "dandiya"
-  | "popatiyu" | "sanedo" | "hudo" | "tippani"
+  | "popatiyu" | "sanedo" | "hudo" | "tippani" | "walk" | "handFlow"
   | "centreInOut" | "partnerSwap";
 interface StepDef {
   id: StepId;
   group: "step" | "formation";
-  gu: string; en: string;
   unitBeats: number;     // 2, 4 or 8
   travel: number;        // circle speed factor
   pairs?: boolean;       // Dandiya, Hudo, Partner swap
@@ -334,42 +305,20 @@ interface Scene {
   centre: CentreId;
   betweenDecor: DecorId[];
   sequence: SequenceItem[];
-  choreography: "manual" | "auto";
   songId: string | null;
 }
-interface BeatMap {
-  beats: number[];        // seconds
-  downbeats: number[];    // seconds
-  tempoCurve: { t: number; bpm: number }[];
-  bpm: number;            // median
-  confidence: number;     // 0–1
-  energy: number[];       // per-beat loudness, for auto choreography
-  version: number;        // bump to invalidate cache
-}
+interface TapSync { bpm: number; offset: number }   // offset: song time (s) of a bar line
+interface BeatGrid { beats: number[]; firstDownbeat: number; bpm: number }
 ```
 
 **Module rules**
-- The renderer only reads `Scene`, `BeatMap` and the current beat position. It never touches the DOM panel or audio directly.
+- The renderer only reads `Scene` and the current beat position. It never touches the DOM panel or audio directly.
 - `pose()` is a pure function of `(step, beatPosInStep, dancerIndex)`, so swapping in a 2.5D renderer later reuses all choreography.
 - One clock: the audio playback position. Animation never runs on its own timer while a song plays.
 
-## 8. Beat-matching specification
+## 8. Beat clock
 
-Runs once per song in a Web Worker.
-
-1. **Decode and prepare:** decode with `AudioContext.decodeAudioData`, mix to mono, resample to 22,050 Hz.
-2. **Onset strength:** STFT (window 1024, hop 256 ≈ 11.6 ms), 40-band mel log-magnitude, half-wave-rectified spectral flux summed across bands. Also keep a separate low-band (< 150 Hz) flux to capture the dhol's bass stroke.
-3. **Tempo curve:** autocorrelation of the onset envelope over 8 s windows with a 2 s hop, searching 70–200 BPM with a log-Gaussian prior centred near 120 BPM. Resolve octave errors by scoring T, 2T, T/2 and 2T/3 candidates (garba often has a 6/8 feel). Smooth the curve so it can rise steadily, since garba songs commonly accelerate.
-4. **Beat tracking:** dynamic-programming beat tracker (Ellis 2007) using the local period from the tempo curve, so beats follow speed-ups.
-5. **Downbeats:** for each of the four bar phases, sum the low-band flux at those beats; the strongest phase is beat 1.
-6. **Energy:** RMS loudness per beat, smoothed over 4 bars, for auto choreography.
-7. **Confidence:** mean onset strength at beats relative to off-beat positions. Below 0.35, show "Beat detection is unsure. Tap to correct" and offer the manual tools.
-
-- **Performance:** a 5-minute song analyses in under 4 s on a recent laptop; progress events at least every 10%.
-- **Reference check:** during development, compare results against essentia.js `RhythmExtractor2013` on the test set. If our tracker is clearly worse, ship essentia.js (WASM) in the worker instead.
-- **Cache:** IndexedDB key = SHA-1 of the file's bytes + analysis `version`.
-
-**Beat clock (playback):** binary-search the current audio time in `beats` to get index *i* and fraction *f*; beat position = *i* + *f*. Sequence position is counted from the first downbeat, and step boundaries snap to downbeats. Hinch and Fudardi (2-beat units) still change only on bar boundaries.
+**Beat clock (playback):** the sync (§5.8) becomes an even grid of beat times; binary-search the current song time in `beats` to get index *i* and fraction *f*; beat position = *i* + *f*. Unsynced songs run at 120 bpm from the start of the song. Sequence position is counted from the first downbeat, and step boundaries snap to downbeats. Hinch and Fudardi (2-beat units) still change only on bar boundaries.
 
 ## 9. Rendering specification
 
@@ -386,10 +335,8 @@ Runs once per song in a Web Worker.
 | Area | Target |
 |---|---|
 | Frame rate | 60 fps with 5 circles (~220 dancers) on a 2021+ laptop with integrated graphics |
-| Audio–visual sync | Claps and hops within ±30 ms of detected beats |
-| Beat accuracy | ≥ 90% of beats within ±70 ms on the test set |
-| Analysis time | < 4 s for a 5-minute song |
-| First load | Interactive in < 2 s on broadband, excluding song files |
+| Audio–visual sync | Claps and hops within ±30 ms of the synced beats |
+| First load | Interactive in < 2 s on broadband, excluding YouTube |
 | Browsers | Latest Chrome, Edge, Safari, Firefox on macOS and Windows |
 
 ## 11. Accessibility
@@ -399,10 +346,9 @@ Runs once per song in a Web Worker.
 - Every swatch, print and centre option has a text label (not colour alone).
 - `prefers-reduced-motion` honoured as in §9.
 
-## 12. Music files and test set
+## 12. Music files
 
-- Song files are personal copies. Keep `music/` in `.gitignore` so they are never committed or published with the GitHub Pages build; the deployed site relies on drag and drop.
-- **Test set:** 10 tracks covering slow traditional garba, fast filmi garba, a 6/8 hinch-heavy song, a song that speeds up, and a nonstop mashup. Hand-mark beats for 30 s of each in Audacity or Sonic Visualiser and keep the marks in `tests/beats/`.
+- The app plays YouTube only. Personal song files may still sit in `music/`, which stays in `.gitignore` so they are never committed or published with the GitHub Pages build.
 
 ## 13. Milestones
 
@@ -417,6 +363,7 @@ Runs once per song in a Web Worker.
 | M6 | QA and release | Quality targets in §10 met; accessibility pass; v1 deployed |
 | M7 | Outfits — **Deferred** | Outfit customization (spec in `docs/M7-outfits.md`) was built and then removed; not part of this version |
 | M8 | More steps and formations | Popatiyu, Sanedo, Hudo, Tippani and the two formations in §5.9 drawn and beat-synced; Steps/Formations library groups; auto choreography uses them |
+| M9 | YouTube only | Local files, the music manifest, beat analysis and auto choreography removed (M3–M5 and M8 parts superseded); sync is Tempo / Tap beat / Reset; Walk and Hand flow added |
 
 ## 14. Release checklist
 
@@ -424,16 +371,15 @@ Runs once per song in a Web Worker.
 - [ ] Four prints render clearly at 1 and 5 circles
 - [ ] 1–5 circles, per-circle direction and arrangement, Set all shortcuts
 - [ ] Seven centrepieces; between-circle decor toggles
-- [ ] Songs load from `music/` and by drag and drop
-- [ ] Analysis runs in a worker with progress, caches, and handles speed-ups
+- [ ] Song list shows only YouTube songs (no badges, no drop zone or file picker)
 - [ ] Steps change on downbeats; claps land on beats
-- [ ] Manual correction tools work when confidence is low
+- [ ] Sync box has only Tempo (typed), Tap beat and Reset; a typed tempo and a tap sync are saved per song; Reset returns to 120 bpm
 - [ ] Play mode keyboard controls, auto-hiding control panel, ground fits the screen
 - [ ] Settings persist across reloads; no network calls except fonts (and YouTube, only when a YouTube song is used)
-- [ ] YouTube songs: starter list and added links show with badges; any link format is accepted and invalid links get a clear message; the player stays visible and never overlaps the ground (Now playing box in the Music section in Build mode, bottom-right in Play mode, ground clear of it at 1280×720, 1440×900 and 1920×1080), and switching modes doesn't reload it; tap-to-sync after 4+ taps, saved per video; embedding errors show the message from §5.7
-- [ ] Dancers rest on page load and with no song playing; they move only while a song plays (files and YouTube, from the song list or Play mode), freeze on pause, resume in place, and ease back to rest when the song ends or stops; Play garba with no song shows "Pick a song to start the garba"
+- [ ] YouTube songs: starter list and added links show; any link format is accepted and invalid links get a clear message; the player stays visible and never overlaps the ground (Now playing box in the Music section in Build mode, bottom-right in Play mode, ground clear of it at 1280×720, 1440×900 and 1920×1080), and switching modes doesn't reload it; tap-to-sync after 4+ taps, saved per video; embedding errors show the message from §5.7
+- [ ] Dancers rest on page load and with no song playing; they move only while a song plays (from the song list or Play mode), freeze on pause, resume in place, and ease back to rest when the song ends or stops; Play garba with no song shows "Pick a song to start the garba"
 - [ ] EN | ગુ toggle: English by default; each mode shows only its own language (logo excepted); the choice survives a reload
-- [ ] No night label in the header; no "on every dancer", Music explanation, Steps how-to or Auto fallback text
+- [ ] No night label in the header; no "on every dancer", Music explanation, Steps how-to or Manual/Auto toggle
 - [ ] Steps reorder by dragging the ⋮⋮ handle (drop line shown, Esc cancels) and by Alt+↑ / Alt+↓
 - [ ] Narrow-window message below 1024 px
 - **M7 Outfits — Deferred:** no checklist items in this version (spec kept in `docs/M7-outfits.md`).
@@ -444,7 +390,7 @@ Runs once per song in a Web Worker.
 - [ ] Into the centre & out never overlaps the centrepiece or neighbouring circles at 5 circles
 - [ ] Partner swap leaves dancers in their new places; with Alternate, men and women trade places
 - [ ] All new moves stay in time with the beat after scrubbing
-- [ ] Auto choreography uses the new steps and formations
+- [ ] Walk: arms swing gently, no claps, circle turns at a relaxed speed; Hand flow: circle stops, no sway or turning, arms alternate on the beat with circling wrists; both blend smoothly with neighbouring steps
 - [ ] Still 60 fps at 5 circles with all decorations on (the outfits part waits for M7, which is deferred)
 
 ## 15. Open questions

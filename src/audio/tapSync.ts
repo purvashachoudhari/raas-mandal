@@ -1,18 +1,25 @@
-import type { BeatGrid } from "../analysis/corrections";
 import { BEATS_PER_BAR } from "../data/steps";
 
-// Tap-to-sync for YouTube songs (§5.8): their audio can't be analysed, so the user taps along and
-// the beat is a straight line through the taps. Saved per video in localStorage.
+// Tap-to-sync (§5.8): YouTube audio can't be analysed, so the user taps along (or types the tempo)
+// and the beat is a straight line through the taps. Saved per video in localStorage.
 
-export interface TapSync {
-  /** Tempo, after any ½× / 2×. */
+/** The beats the dancers follow. */
+export interface BeatGrid {
+  /** Song times (s). */
+  beats: number[];
+  /** Index into `beats` of the first downbeat: the sequence starts there. */
+  firstDownbeat: number;
   bpm: number;
-  /** Song time (s) of the first fitted tap: a beat, taken as the start of a bar. */
-  offset: number;
-  /** Manual nudge on top of the fit (ms): + later, − earlier. */
-  nudgeMs: number;
 }
 
+export interface TapSync {
+  bpm: number;
+  /** Song time (s) of a beat taken as the start of a bar: the first fitted tap, or 0 for a typed tempo. */
+  offset: number;
+}
+
+/** Tempo limits for a typed or tapped tempo. */
+export const MIN_BPM = 40, MAX_BPM = 260;
 export const MIN_TAPS = 4;
 const MAX_TAPS = 16;
 /** Taps further apart than this start a new set. */
@@ -29,8 +36,10 @@ function readAll(): Record<string, TapSync> {
 }
 
 export function loadSync(videoId: string): TapSync | null {
-  const s = readAll()[videoId];
-  return s && Number.isFinite(s.bpm) && Number.isFinite(s.offset) ? { bpm: s.bpm, offset: s.offset, nudgeMs: Number(s.nudgeMs) || 0 } : null;
+  const s = readAll()[videoId] as (TapSync & { nudgeMs?: number }) | undefined;
+  if (!s || !Number.isFinite(s.bpm) || !Number.isFinite(s.offset)) return null;
+  // Syncs saved before the nudge control was removed: fold the nudge into the offset.
+  return { bpm: s.bpm, offset: s.offset + (Number(s.nudgeMs) || 0) / 1000 };
 }
 
 export function saveSync(videoId: string, sync: TapSync | null) {
@@ -67,13 +76,13 @@ export function fitTapLine(taps: readonly number[]): { bpm: number; offset: numb
 }
 
 /**
- * An even beat grid from a tap sync, so the beat clock, step changes and Play mode work exactly as
- * for analysed songs. The sequence starts on the earliest bar line (in step with the first tap)
- * at or after the start of the song.
+ * An even beat grid from a tap sync, which drives the beat clock, downbeat-aligned step changes and
+ * Play mode. The sequence starts on the earliest bar line (in step with the sync's offset) at or
+ * after the start of the song.
  */
 export function syncGrid(sync: TapSync, duration: number): BeatGrid {
   const period = 60 / sync.bpm;
-  const off = sync.offset + sync.nudgeMs / 1000;
+  const off = sync.offset;
   const bar = period * BEATS_PER_BAR;
   const firstBar = off - Math.floor(off / bar) * bar; // 0 ≤ firstBar < one bar
   const start = firstBar - Math.floor(firstBar / period) * period; // first beat at or after 0

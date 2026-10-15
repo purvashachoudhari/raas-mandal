@@ -35,9 +35,15 @@ function drawArms(ctx: CanvasRenderingContext2D, s: number, p: Pose, accent: str
   ctx.beginPath();
   for (const side of [-1, 1]) {
     const sx = side * 0.075, sy = -0.22;
-    // Lowered (out to the sides) to raised (together above the head).
-    let hx = side * (0.3 + (0.035 - 0.3) * a), hy = -0.4 + (-0.58 + 0.4) * a;
-    let ex = side * (0.25 + (0.14 - 0.25) * a), ey = -0.18 + (-0.36 + 0.18) * a;
+    // Lowered (out to the sides) to raised (together above the head); one arm can sit higher than the other.
+    const up = clamp(a + side * p.armLift * 0.45, 0, 1);
+    let hx = side * (0.3 + (0.035 - 0.3) * up), hy = -0.4 + (-0.58 + 0.4) * up;
+    let ex = side * (0.25 + (0.14 - 0.25) * up), ey = -0.18 + (-0.36 + 0.18) * up;
+    // Walking: hands swing forward and back at the sides, in opposition.
+    hy += side * p.armSwing * 0.1; ey += side * p.armSwing * 0.04;
+    // Wrists circling (the two hands half a turn apart).
+    const wa = p.wristPhase + (side > 0 ? Math.PI : 0);
+    hx += p.wrist * 0.035 * Math.cos(wa); hy += p.wrist * 0.035 * Math.sin(wa);
     // Forward and low: hands in front of the body, towards the centre.
     hx += (side * 0.07 - hx) * fwd; hy += (0.04 - hy) * fwd;
     ex += (side * 0.16 - ex) * fwd; ey += (-0.08 - ey) * fwd;
