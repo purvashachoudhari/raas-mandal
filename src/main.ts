@@ -214,13 +214,14 @@ window.addEventListener("mousemove", () => { if (mode === "play") wake(); });
 // ---------- YouTube screen ----------
 // The YouTube player must stay visible while a YouTube song is selected (YouTube's rules), and moving an
 // iframe in the page would reload it. So the screen stays put in the page and is only positioned: in
-// Build mode over its slot in the Music section's Now playing box, in Play mode in the bottom-right
-// corner, where the ground keeps clear of it. It doesn't fade with the Play panel.
+// Build mode over its slot in the Music section's Now playing box, in Play mode over its slot at the
+// bottom of the Play panel (bottom left), where the ground keeps clear of it. It isn't part of the
+// Play panel, so it stays visible when the panel fades.
 const ytScreen = byId("ytScreen");
 const panelEl = byId("panel");
 const stageEl = byId("stage");
-/** Play mode player size and its gap to the window edges (CSS px). */
-const PLAY_SCREEN = { w: 356, h: 200, margin: 16 };
+const playPanelEl = byId("playPanel");
+const playSlot = byId("ppYtSlot");
 /** The screen's rect in stage coordinates while it's in Play mode, for the ground to avoid. */
 let playScreenRect: Rect | null = null;
 let placed = "";
@@ -228,10 +229,14 @@ function placeYouTubeScreen() {
   const slot = document.getElementById("ytSlot");
   let r: { left: number; top: number; width: number; height: number } | null = null;
   let clip = "none";
-  if (session.songId && !session.error) {
+  const showing = !!session.songId && !session.error;
+  // The Play panel only makes room for the player (and widens for it) while there is one.
+  playSlot.hidden = !showing;
+  playPanelEl.classList.toggle("has-yt", showing);
+  if (showing) {
     if (mode === "play") {
-      const { w, h, margin } = PLAY_SCREEN;
-      r = { left: window.innerWidth - w - margin, top: window.innerHeight - h - margin, width: w, height: h };
+      const s = playSlot.getBoundingClientRect();
+      if (s.width) r = { left: s.left, top: s.top, width: s.width, height: s.height };
     } else if (slot && slot.getClientRects().length) {
       // Sit exactly on the slot, so it scrolls with the panel like any other content. Whatever part
       // is scrolled out of the panel is clipped, so it never draws over the header or the ground.

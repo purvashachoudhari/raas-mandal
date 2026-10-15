@@ -1,7 +1,7 @@
 import type { SongErrorKey } from "../data/strings";
 
 // Songs (§5.7) play through the YouTube IFrame Player API. The player must stay visible, so it
-// lives in a small framed screen that main.ts positions in the Music section or the Play mode corner.
+// lives in a small framed screen that main.ts positions in the Music section or at the bottom of the Play panel.
 
 /** Accepts any YouTube link format (watch, youtu.be, shorts, embed, live, music, mobile) or a bare ID. */
 export function parseYouTubeId(input: string): string | null {

@@ -43,7 +43,8 @@ export function mountPlayPanel(panel: HTMLElement, handlers: PlayPanelHandlers):
       <button type="button" class="icon-btn" data-a="restart">${RESTART}</button>
       <button type="button" class="icon-btn" data-a="pause">${PAUSE}</button>
       <button type="button" class="ghost" data-a="exit"></button>
-    </div>`;
+    </div>
+    <div class="pp-yt" id="ppYtSlot" aria-hidden="true" hidden></div>`;
   const stepLabel = panel.querySelector<HTMLElement>(".pp-step")!;
   const seqList = panel.querySelector<HTMLElement>(".pp-seq")!;
   const songBlock = panel.querySelector<HTMLElement>(".pp-song")!;

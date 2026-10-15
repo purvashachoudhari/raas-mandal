@@ -1,7 +1,7 @@
 import { TAU } from "../util/math";
 
 export interface StageLayout {
-  /** Ground centre in CSS px (the stage centre, unless Play mode moves it clear of the YouTube player). */
+  /** Ground centre in CSS px (always the stage centre). */
   cx: number;
   cy: number;
   /** Half the usable stage size. */
@@ -46,27 +46,21 @@ export interface Rect { x: number; y: number; w: number; h: number }
 const AVOID_GAP = 12;
 
 /**
- * Play mode ground: as large as the margin allows and centred, but clear of `avoid` (the YouTube
- * player in the bottom-right corner). It first moves left, as far as the left margin; if that isn't
- * enough room, it also shrinks just enough to fit. Returns the centre and the ground's outer radius
- * (edge lights included).
+ * Play mode ground: centred on the screen and as large as the margin allows, but clear of `avoid`
+ * (the YouTube player at the bottom of the Play panel, bottom left): if the full-size ground would
+ * come within AVOID_GAP of it, the ground shrinks just enough. Returns the centre and the ground's
+ * outer radius (edge lights included).
  */
 function placePlayGround(width: number, height: number, avoid: Rect | null) {
   const margin = Math.min(width, height) * PLAY_MARGIN;
   const full = Math.min(width, height) / 2 - margin;
   const cx = width / 2, cy = height / 2;
   if (!avoid) return { cx, cy, r: full };
-  // Vertical distance from the centre to the player (0 if level with it).
+  // Distance from the centre to the nearest point of the player.
+  const dx = Math.max(avoid.x - cx, cx - (avoid.x + avoid.w), 0);
   const dy = Math.max(avoid.y - cy, cy - (avoid.y + avoid.h), 0);
-  for (let r = full; r > full * 0.5; r -= 1) {
-    const reach = r + AVOID_GAP;
-    // Rightmost centre that keeps the ground clear: anything left of the player's left edge by more
-    // than the ground's half-width at the player's height.
-    const maxCx = dy >= reach ? Infinity : avoid.x - Math.sqrt(reach * reach - dy * dy);
-    const x = Math.min(cx, maxCx);
-    if (x - r >= margin) return { cx: x, cy, r };
-  }
-  return { cx, cy, r: full * 0.5 };
+  const r = Math.min(full, Math.hypot(dx, dy) - AVOID_GAP);
+  return { cx, cy, r: Math.max(r, full * 0.5) };
 }
 
 export function computeLayout(
