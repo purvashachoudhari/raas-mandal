@@ -72,14 +72,18 @@ function leafSvg(side: "l" | "r"): string {
   </svg>`;
 }
 
-/** Marigold head: a ring of petals round a deeper centre. */
-function marigold(x: number, y: number, petal: string, heart: string): string {
+/** Marigold head: a ring of petals round a deeper centre. `k` scales it (1 ≈ 7.6 units across the petals). */
+function marigold(x: number, y: number, petal: string, heart: string, k = 1): string {
   const ring = Array.from({ length: 10 }, (_, i) => {
     const a = (i / 10) * Math.PI * 2;
-    return `<circle cx="${(x + Math.cos(a) * 4.6).toFixed(1)}" cy="${(y + Math.sin(a) * 4.6).toFixed(1)}" r="3"/>`;
+    return `<circle cx="${(x + Math.cos(a) * 4.6 * k).toFixed(1)}" cy="${(y + Math.sin(a) * 4.6 * k).toFixed(1)}" r="${(3 * k).toFixed(2)}"/>`;
   }).join("");
-  return `<g fill="${petal}">${ring}<circle cx="${x}" cy="${y}" r="4.6"/></g><circle cx="${x}" cy="${y}" r="2.6" fill="${heart}"/>`;
+  return `<g fill="${petal}">${ring}<circle cx="${x}" cy="${y}" r="${(4.6 * k).toFixed(2)}"/></g><circle cx="${x}" cy="${y}" r="${(2.6 * k).toFixed(2)}" fill="${heart}"/>`;
 }
+
+/** Marigolds alternate orange and yellow along a garland: `i` is the flower's place in it. */
+const garlandFlower = (x: number, y: number, i: number, k: number) =>
+  i % 2 ? marigold(x, y, "#f5b324", "#e0961a", k) : marigold(x, y, "#f07a1a", "#c95a10", k);
 
 /** A small clay diya with a flickering flame. */
 function diya(x: number): string {
@@ -92,19 +96,108 @@ function diya(x: number): string {
   </g>`;
 }
 
-function frameSvg(): string {
-  // Toran: a gently sagging string with marigolds, and mango leaves hanging between them.
-  const sag = (x: number) => 26 + 10 * (1 - ((x - 150) / 114) ** 2);
-  const flowers: string[] = [], leaves: string[] = [];
-  for (let i = 0; i <= 10; i++) {
-    const x = 40 + i * 22;
-    flowers.push(marigold(x, sag(x), i % 2 ? "#f5b324" : "#f07a1a", i % 2 ? "#e0961a" : "#c95a10"));
-    if (i < 10) {
-      const lx = x + 11, ly = sag(lx) + 2;
-      leaves.push(`<path d="M${lx} ${ly} C${lx + 6} ${ly + 8} ${lx + 4} ${ly + 18} ${lx} ${ly + 24} C${lx - 4} ${ly + 18} ${lx - 6} ${ly + 8} ${lx} ${ly} Z" fill="${i % 2 ? "#3d8b37" : "#2e9a3e"}"/>
-        <path d="M${lx} ${ly + 2} V${ly + 22}" stroke="#1f6b2a" stroke-width=".8"/>`);
+/** A mango leaf, `len` long, hanging from (x, y) and turned by `deg` (0 = straight down). */
+function mangoLeaf(x: number, y: number, deg: number, len = 20, fill = "#2e9a3e"): string {
+  const w = len * 0.28;
+  return `<g transform="rotate(${deg.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})">
+    <path d="M${x} ${y} C${x + w} ${y + len * 0.35} ${x + w * 0.7} ${y + len * 0.75} ${x} ${y + len} C${x - w * 0.7} ${y + len * 0.75} ${x - w} ${y + len * 0.35} ${x} ${y} Z" fill="${fill}"/>
+    <path d="M${x} ${y + 1.5} V${y + len - 2}" stroke="#1f6b2a" stroke-width=".7"/></g>`;
+}
+
+/** Points along the garland's line on the frame: the middle of the arch's thickness (θ: 180° left … 0° right). */
+const archPoint = (deg: number): [number, number] => {
+  const a = (deg * Math.PI) / 180;
+  return [150 + 96 * Math.cos(a), 140 - 75 * Math.sin(a)];
+};
+
+/** A long hanging strand from (x, y): marigolds ending in a pink lotus bud, or jasmine (mogra) ending in a tassel. */
+function strand(x: number, y: number, len: number, kind: "marigold" | "jasmine"): string {
+  const parts: string[] = [`<path d="M${x} ${y} V${y + len}" stroke="#7a4a1c" stroke-width=".8"/>`];
+  if (kind === "marigold") {
+    for (let d = 0, i = 0; d <= len; d += 6.5, i++) parts.push(garlandFlower(x, y + d, i, 0.66));
+    const by = y + len + 4;
+    // Lotus bud: a pink teardrop with two side petals.
+    parts.push(`<path d="M${x} ${by + 12} C${x + 6} ${by + 7} ${x + 5} ${by + 1} ${x} ${by - 2} C${x - 5} ${by + 1} ${x - 6} ${by + 7} ${x} ${by + 12} Z" fill="#e8749e" stroke="#b8406e" stroke-width=".7"/>
+      <path d="M${x} ${by + 11} C${x + 7} ${by + 9} ${x + 8} ${by + 4} ${x + 6} ${by + 1}" fill="none" stroke="#f3a3c0" stroke-width="1.2"/>
+      <path d="M${x} ${by + 11} C${x - 7} ${by + 9} ${x - 8} ${by + 4} ${x - 6} ${by + 1}" fill="none" stroke="#f3a3c0" stroke-width="1.2"/>
+      <path d="M${x - 2} ${by - 2} H${x + 2}" stroke="#3d8b37" stroke-width="2"/>`);
+  } else {
+    const buds: string[] = [];
+    for (let d = 0, i = 0; d <= len; d += 4.6, i++) {
+      buds.push(`<ellipse cx="${(x + (i % 2 ? 1.6 : -1.6)).toFixed(1)}" cy="${(y + d).toFixed(1)}" rx="2" ry="2.9" transform="rotate(${i % 2 ? 22 : -22} ${(x + (i % 2 ? 1.6 : -1.6)).toFixed(1)} ${(y + d).toFixed(1)})"/>`);
+    }
+    parts.push(`<g fill="#fffaf0" stroke="#e3d6b8" stroke-width=".5">${buds.join("")}</g>`);
+    const ty = y + len + 3;
+    // Tassel: a small pink knot with fringe.
+    const fringe = Array.from({ length: 7 }, (_, i) => `<path d="M${x - 3 + i} ${ty + 4} L${x - 4 + i * 1.33} ${ty + 14}"/>`).join("");
+    parts.push(`<circle cx="${x}" cy="${ty}" r="3" fill="#d94f86"/><path d="M${x - 3.5} ${ty + 3} H${x + 3.5}" stroke="#f2c14e" stroke-width="1.6"/>
+      <g stroke="#e8749e" stroke-width="1" stroke-linecap="round">${fringe}</g>`);
+  }
+  return parts.join("");
+}
+
+/** A small brass bell on a short chain, hanging from (x, y). */
+function bell(x: number, y: number): string {
+  const top = y + 12;
+  return `<path d="M${x} ${y} V${top}" stroke="#c9963c" stroke-width="1" stroke-dasharray="1.6 1.2"/>
+    <circle cx="${x}" cy="${top + 1}" r="1.8" fill="url(#brass-f)"/>
+    <path d="M${x} ${top + 2} C${x + 4.5} ${top + 2} ${x + 5} ${top + 7} ${x + 5.5} ${top + 10} Q${x + 7.5} ${top + 12.5} ${x + 7} ${top + 13} H${x - 7} Q${x - 7.5} ${top + 12.5} ${x - 5.5} ${top + 10} C${x - 5} ${top + 7} ${x - 4.5} ${top + 2} ${x} ${top + 2} Z" fill="url(#brass-f)" stroke="#7a5212" stroke-width=".6"/>
+    <circle cx="${x}" cy="${top + 15}" r="1.8" fill="#8a6418"/>`;
+}
+
+/** A group that sways once, pivoting on (x, y), when the doors open. */
+const sway = (x: number, y: number, body: string, i: number) =>
+  `<g class="intro-sway" style="transform-origin:${x.toFixed(1)}px ${y.toFixed(1)}px;animation-delay:${(0.15 + i * 0.07).toFixed(2)}s">${body}</g>`;
+
+/** The toran, draped on the arch: flowers along it, marigold swags, mango leaves, side strands and two bells. */
+function toranSvg(): string {
+  const out: string[] = [];
+  // Attachment points every 22.5°; swags hang between the ones on the upper arch.
+  const anchors = Array.from({ length: 9 }, (_, i) => archPoint(180 - i * 22.5));
+
+  // Side strands from the top corners of the frame (where the arch meets the sides), behind the arch flowers.
+  const sides: [number, "marigold" | "jasmine", number][] = [[49, "marigold", 132], [58, "jasmine", 118]];
+  sides.forEach(([x, kind, len], i) => {
+    out.push(sway(x, 140, strand(x, 140, len, kind), i));
+    const mx = 300 - x, other = kind === "marigold" ? "jasmine" : "marigold";
+    // The right side mirrors the positions and alternates the kinds.
+    out.push(sway(mx, 140, strand(mx, 140, other === "marigold" ? 132 : 118, other), i + 2));
+  });
+
+  // Mango leaves tucked in: hanging at each attachment point, and peeking out above the arch between them.
+  anchors.forEach(([x, y], i) => out.push(mangoLeaf(x, y + 3, (i - 4) * -4, 19, i % 2 ? "#3d8b37" : "#2e9a3e")));
+  for (let deg = 168.75; deg > 0; deg -= 22.5) {
+    const [x, y] = archPoint(deg);
+    out.push(mangoLeaf(x, y - 2, 180 + (90 - deg), 16, "#3d8b37"));
+  }
+
+  // Scalloped swags: U-shaped loops of small marigolds between attachment points.
+  for (let i = 1; i < anchors.length - 2; i++) {
+    const [x0, y0] = anchors[i], [x1, y1] = anchors[i + 1];
+    const cx = (x0 + x1) / 2, cy = Math.max(y0, y1) + 34;
+    for (let k = 1, n = 8; k < n; k++) {
+      const t = k / n, u = 1 - t;
+      const x = u * u * x0 + 2 * u * t * cx + t * t * x1, y = u * u * y0 + 2 * u * t * cy + t * t * y1;
+      out.push(garlandFlower(x, y, k, 0.6));
     }
   }
+
+  // The row of marigolds along the arch, on a cord.
+  out.push(`<path d="M54 140 A96 75 0 0 1 246 140" fill="none" stroke="#7a4a1c" stroke-width="1.4"/>`);
+  for (let i = 0; i <= 20; i++) {
+    const [x, y] = archPoint(180 - i * 9);
+    out.push(garlandFlower(x, y, i, 0.95));
+  }
+
+  // Two brass bells, one either side of the centre.
+  [125, 55].forEach((deg, i) => {
+    const [x, y] = archPoint(deg);
+    out.push(sway(x, y, bell(x, y + 4), i));
+  });
+  return out.join("");
+}
+
+function frameSvg(): string {
   const beads = "M54 362 V140 A96 75 0 0 1 246 140 V362";
   return `<svg class="intro-frame" viewBox="0 0 300 380" aria-hidden="true">
     <defs>
@@ -123,10 +216,9 @@ function frameSvg(): string {
     <path d="${beads}" fill="none" stroke="#b07a3c" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="0 7"/>
     <path d="M64 362 V140 A86 62 0 0 1 236 140 V362" fill="none" stroke="#2a1508" stroke-width="3"/>
     <rect x="34" y="362" width="232" height="14" rx="2" fill="#3a1e0b" stroke="#2a1508"/>
-    <path d="M150 40 C156 46 157 52 150 56 C143 52 144 46 150 40 Z" fill="url(#brass-f)"/>
-    ${stud(150, 60, "brass-f", 5)}
-    <path d="M36 ${sag(36)} Q150 ${sag(150) * 2 - 26} 264 ${sag(264)}" fill="none" stroke="#7a4a1c" stroke-width="1.4"/>
-    ${leaves.join("")}${flowers.join("")}
+    <path d="M150 32 C156 38 157 44 150 48 C143 44 144 38 150 32 Z" fill="url(#brass-f)"/>
+    ${stud(150, 51, "brass-f", 4)}
+    ${toranSvg()}
     ${diya(20)}${diya(280)}
   </svg>`;
 }

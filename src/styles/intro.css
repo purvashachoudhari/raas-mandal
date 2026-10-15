@@ -87,6 +87,18 @@ html.intro-pending body > * { visibility: hidden; }
 .intro-skip:hover { color: #fff3dc; }
 .intro-skip:focus-visible { outline: 2px solid #f2a51a; outline-offset: 2px; }
 
+/* The toran stays on the frame; its bells and hanging strands sway once as the doors open. */
+.intro-sway { transform-box: view-box; }
+.intro.open .intro-sway { animation: intro-sway 2.6s ease-out 1 both; }
+@keyframes intro-sway {
+  0% { transform: rotate(0); }
+  18% { transform: rotate(5deg); }
+  40% { transform: rotate(-3.5deg); }
+  62% { transform: rotate(2deg); }
+  82% { transform: rotate(-.8deg); }
+  100% { transform: rotate(0); }
+}
+
 /* Diya flames flicker gently. */
 .intro-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: intro-flicker 1.7s ease-in-out infinite; }
 .intro-diya:last-child .intro-flame { animation-delay: -.8s; }
