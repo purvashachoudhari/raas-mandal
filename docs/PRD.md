@@ -35,6 +35,8 @@ Raas Mandal (રાસ મંડળ) is a laptop web app for people who are away
 
 ## 4. Experience overview
 
+An **intro** (§5.14) greets visitors once a day: a carved haveli door that opens into the site.
+
 Two modes:
 
 1. **Build mode.** Left panel of controls, live preview of the garba ground on the right. Every change shows immediately in the preview. The dancers stand still until a song plays (§5.12).
@@ -43,7 +45,7 @@ Two modes:
 The header holds the logo, the **EN | ગુ** language toggle (§5.13) and the **Play garba** button. The selected night is shown only in the panel's Night section, not in the header.
 
 **Primary flow**
-1. Open the app. It opens on tonight's Navratri night (by date), or Night 1 outside the festival.
+1. Open the app. On the first visit of the day the intro door opens; press **Enter / ચાલો** (or Skip). The site opens on tonight's Navratri night (by date), or Night 1 outside the festival.
 2. Adjust the scene top to bottom in the left panel (order in §5).
 3. Select a song. If it isn't synced yet, play it and tap along (or type its tempo) once; the sync is saved for that song.
 4. Press **Play garba**. Full-screen dance begins on the first downbeat. With no song selected, the app says "Pick a song to start the garba" and stays in Build mode.
@@ -230,6 +232,21 @@ The dancers only dance while a song is actually playing.
 - The choice is kept in `localStorage` and restored on reload; the page's `lang` attribute follows it.
 - All UI text lives in one file, `src/data/strings.ts`, with an English and a Gujarati table of identical keys (TypeScript flags a missing translation). Data files hold only ids, colours and timing.
 
+### 5.14 Intro (P1)
+
+A short welcome before the site, shown **once per day per visitor** (the date is kept in `localStorage`; a reload the same day goes straight to the site).
+
+- **Scene:** pure black, full screen. In the centre, an old haveli-style carved wooden double door drawn in SVG (no image files): arched top, carved panels with rosettes and diamonds, rows of brass studs, a brass knocker on each leaf, in a carved frame with a brass finial. Warm wood and brass tones. Above it, a **toran** of orange and yellow marigolds with green mango leaves. A small **diya** on each side with a gently flickering flame. The carved door is about 65% of the viewport height (and at most about 32% of its width), keeping its proportions.
+- **Opening:** about 1 s after the intro appears, the two leaves swing open **inward** on their outer hinges with 3D perspective over about 1.2 s, and warm golden light spills out of the doorway into the dark.
+- **Greeting:** inside the light, "ચાલો ગરબે રમીએ" fades in with "(Chalo garbe ramiye)" on the line below in smaller text (both lines in both language modes), then a button **Enter / ચાલો** (both languages written together, in both modes). Keyboard focus moves to the button when it appears.
+- **Enter:** plays a soft temple bell (synthesized with Web Audio: a few inharmonic partials ringing down; no audio files) and zooms through the doorway (scale up and fade) into the site over about 0.8 s.
+- **Skip:** a small Skip link (Skip / છોડો, following the language) in the top-right corner always works, from the first moment; Esc skips too.
+- **Accessibility:** the intro is a modal dialog; the site behind is inert until it closes, Tab stays inside it, and focus lands on **Play garba** afterwards.
+- **Reduced motion:** the door is shown already open with the greeting and button; nothing animates (no swing, fades, flicker or zoom).
+- **No flash:** an inline script in `index.html` hides the site on black until the intro is up.
+- **Narrow windows** (below 1024 px) skip the intro and show the laptop message as before; it isn't counted as seen.
+- Strings live in `src/data/strings.ts` (`intro…`); the door, toran and diyas are in `src/ui/intro.ts`, the bell in `src/audio/bell.ts`, styles in `src/styles/intro.css`.
+
 ---
 
 ## 6. Visual design
@@ -271,6 +288,7 @@ raas-mandal/
     │   ├── patterns/         # bandhani.ts, patola.ts, ajrakh.ts, abhla.ts
     │   └── festive/          # centrepieces and between-circle decor
     ├── audio/
+    │   ├── bell.ts           # intro temple bell (Web Audio synthesis)
     │   ├── library.ts        # starter songs + added YouTube links
     │   ├── youtube.ts        # IFrame Player API, link parsing, error keys
     │   ├── session.ts        # selected song, its sync: tap, typed tempo, reset
@@ -381,6 +399,7 @@ interface BeatGrid { beats: number[]; firstDownbeat: number; bpm: number }
 - [ ] EN | ગુ toggle: English by default; each mode shows only its own language (logo excepted); the choice survives a reload
 - [ ] No night label in the header; no "on every dancer", Music explanation, Steps how-to or Manual/Auto toggle
 - [ ] Steps reorder by dragging the ⋮⋮ handle (drop line shown, Esc cancels) and by Alt+↑ / Alt+↓
+- [ ] Intro: shown once a day; door opens on its own after ~1 s with light spilling out; greeting and Enter / ચાલો fade in; Enter rings a bell and zooms into the site; Skip and Esc always work; reduced motion shows it open and still; keyboard focus works throughout
 - [ ] Narrow-window message below 1024 px
 - **M7 Outfits — Deferred:** no checklist items in this version (spec kept in `docs/M7-outfits.md`).
 - [ ] Steps section shows Steps and Formations groups; both add into one sequence

@@ -2,6 +2,7 @@ import "./styles/tokens.css";
 import "./styles/panel.css";
 import "./styles/stage.css";
 import "./styles/play.css";
+import "./styles/intro.css";
 
 import { createSongClock } from "./audio/beatClock";
 import { createLibrary } from "./audio/library";
@@ -20,12 +21,15 @@ import { mountCircles } from "./ui/circles";
 import { mountDirection } from "./ui/direction";
 import { byId } from "./ui/dom";
 import { getLang, localized, setLang, t } from "./ui/i18n";
+import { mountIntro } from "./ui/intro";
 import { mountMusic } from "./ui/music";
 import { mountNights } from "./ui/nights";
 import { mountPlayPanel } from "./ui/playPanel";
 import { mountPrints } from "./ui/prints";
 import { mountSteps } from "./ui/steps";
 import { applyTheme } from "./ui/theme";
+
+mountIntro();
 
 const store = createStore();
 const library = createLibrary();

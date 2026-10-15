@@ -1,0 +1,113 @@
+/* Intro (§5.14): a haveli door on black that opens into the site. */
+
+/* Until the intro is up, index.html's inline script keeps the site hidden on black (no flash). */
+html.intro-pending body { background: #000; }
+html.intro-pending body > * { visibility: hidden; }
+
+.intro {
+  position: fixed; inset: 0; z-index: 100; overflow: hidden;
+  background-color: #000; transition: background-color .8s ease-in;
+}
+.intro:focus { outline: none; }
+
+.intro-scene {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  transition: transform .8s cubic-bezier(.55, 0, .8, .2), opacity .8s ease-in;
+}
+
+/* The door unit: a 300 × 380 drawing (toran and diyas included) sized so the carved door itself
+   (212 × 324 units) is about 65% of the viewport height, and at most about 32% of its width. */
+.intro-door {
+  --u: min(calc(32vw * 300 / 212), calc(65vh * 300 / 324));
+  position: relative; width: var(--u); aspect-ratio: 300 / 380;
+}
+.intro-frame { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; }
+
+/* Light behind the doors (the doorway opening: x 64–236, y 78–362 of 300 × 380), and its spill into the dark. */
+.intro-light, .intro-leaves, .intro-words {
+  position: absolute; left: 21.333%; width: 57.333%; top: 20.526%; height: 74.737%;
+}
+.intro-light {
+  z-index: 1;
+  border-radius: 50% 50% 0 0 / 21.83% 21.83% 0 0;
+  background: radial-gradient(ellipse at 50% 58%, #fff7dc 0%, #ffd97f 38%, #f2a636 74%, #cf7114 100%);
+  box-shadow: 0 0 calc(var(--u) * .16) calc(var(--u) * .04) rgba(255, 190, 80, .45);
+  opacity: 0; transition: opacity 1.2s ease-out;
+}
+.intro-spill {
+  position: absolute; left: 50%; top: 60%; width: 240%; aspect-ratio: 1; z-index: 0; pointer-events: none;
+  translate: -50% -50%; scale: .4; opacity: 0;
+  background: radial-gradient(circle, rgba(255, 204, 110, .42), rgba(255, 170, 60, .12) 34%, transparent 64%);
+  transition: opacity 1.4s ease-out, scale 1.4s ease-out;
+}
+.intro.open .intro-light { opacity: 1; }
+.intro.open .intro-spill { opacity: 1; scale: 1; }
+
+/* The two leaves swing inward on their outer hinges, in perspective. */
+.intro-leaves { z-index: 2; display: flex; perspective: calc(var(--u) * 1.6); }
+.intro-leaf {
+  width: 50%; height: 100%; display: block; overflow: visible;
+  transition: transform 1.2s cubic-bezier(.45, .05, .3, 1), filter 1.2s ease;
+}
+.intro-leaf-l { transform-origin: left center; }
+.intro-leaf-r { transform-origin: right center; }
+.intro.open .intro-leaf-l { transform: rotateY(84deg); filter: brightness(.55); }
+.intro.open .intro-leaf-r { transform: rotateY(-84deg); filter: brightness(.55); }
+
+/* Text in the light, above the open leaves and sized to fit between them: always both lines;
+   the button says "Enter / ચાલો". */
+.intro-words {
+  z-index: 4; box-sizing: border-box; padding: 0 9%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+}
+.intro-title, .intro-sub { margin: 0; opacity: 0; translate: 0 calc(var(--u) * .02); transition: opacity .9s ease, translate .9s ease; }
+.intro-title {
+  font-family: var(--display); font-weight: 800; line-height: 1.15;
+  font-size: calc(var(--u) * .052); color: #4a1606;
+}
+.intro-sub { margin-top: calc(var(--u) * .01); font-size: calc(var(--u) * .032); color: #6b2a0a; }
+.intro.show-text .intro-title, .intro.show-text .intro-sub { opacity: 1; translate: 0 0; }
+.intro-enter {
+  margin-top: calc(var(--u) * .04); border: 0; border-radius: 999px;
+  padding: .5em 1.4em .38em; background: #4a1606; color: #ffe9b0;
+  font-family: var(--display); font-weight: 700; font-size: calc(var(--u) * .036);
+  box-shadow: 0 6px 18px -8px rgba(74, 22, 6, .8);
+  /* Visible (and focusable) at once when shown, then fades in. */
+  opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility 0s;
+}
+.intro.show-button .intro-enter { opacity: 1; visibility: visible; }
+.intro-enter:hover { filter: brightness(1.2); }
+.intro-enter:focus-visible { outline: 3px solid #4a1606; outline-offset: 3px; }
+
+.intro-skip {
+  position: absolute; top: 16px; right: 20px; z-index: 2;
+  background: none; border: 0; padding: 6px 8px; font-size: 14px;
+  color: rgba(255, 240, 210, .62); text-decoration: underline; text-underline-offset: 3px;
+}
+.intro-skip:hover { color: #fff3dc; }
+.intro-skip:focus-visible { outline: 2px solid #f2a51a; outline-offset: 2px; }
+
+/* Diya flames flicker gently. */
+.intro-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: intro-flicker 1.7s ease-in-out infinite; }
+.intro-diya:last-child .intro-flame { animation-delay: -.8s; }
+.intro-diya-glow { animation: intro-glow 1.7s ease-in-out infinite; }
+@keyframes intro-flicker {
+  0%, 100% { transform: scale(1, 1); }
+  25% { transform: scale(.9, 1.1); }
+  50% { transform: scale(1.06, .93); }
+  75% { transform: scale(.95, 1.05); }
+}
+@keyframes intro-glow {
+  0%, 100% { opacity: .85; }
+  50% { opacity: 1; }
+}
+
+/* Enter: zoom through the doorway while the black lifts off the site. */
+.intro.leaving { background-color: transparent; pointer-events: none; }
+.intro.leaving .intro-scene { transform: scale(5); opacity: 0; }
+.intro.leaving .intro-skip { opacity: 0; }
+
+/* Reduced motion: the door is already open with the text and button; nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  .intro, .intro * { transition: none !important; animation: none !important; }
+}

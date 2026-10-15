@@ -10,6 +10,13 @@ export type Lang = "en" | "gu";
 export type SongErrorKey = "ytBlocked" | "ytUnavailable" | "ytInvalid" | "ytFailed" | "ytNoApi" | "ytNoResponse";
 
 const en = {
+  // Intro (§5.14). The greeting and the button read the same in both languages.
+  introAria: "Welcome to Raas Mandal",
+  introTitle: "ચાલો ગરબે રમીએ",
+  introSubtitle: "(Chalo garbe ramiye)",
+  introEnter: "Enter / ચાલો",
+  introSkip: "Skip",
+
   // Header and stage
   playGarba: "Play garba",
   language: "Language",
@@ -178,6 +185,13 @@ const en = {
 export type Strings = typeof en;
 
 const gu: Strings = {
+  // Intro (§5.14)
+  introAria: "રાસ મંડળમાં સ્વાગત છે",
+  introTitle: "ચાલો ગરબે રમીએ",
+  introSubtitle: "(Chalo garbe ramiye)",
+  introEnter: "Enter / ચાલો",
+  introSkip: "છોડો",
+
   // Header and stage
   playGarba: "ગરબા રમો",
   language: "ભાષા",
