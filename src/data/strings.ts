@@ -172,7 +172,6 @@ const en = {
 
   // Play mode
   playControlsAria: "Play controls",
-  firstDownbeat: "Starting on the first downbeat…",
   restart: "Restart",
   restartTitle: "Restart (R)",
   play: "Play",
@@ -345,7 +344,6 @@ const gu: Strings = {
 
   // Play mode
   playControlsAria: "રમતનાં બટન",
-  firstDownbeat: "પહેલા ઠેકા પર શરૂ થશે…",
   restart: "ફરી શરૂ કરો",
   restartTitle: "ફરી શરૂ કરો (R)",
   play: "ચલાવો",

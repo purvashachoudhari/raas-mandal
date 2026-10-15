@@ -310,8 +310,7 @@ function tick() {
   music.tick();
   if (mode === "play") {
     const song = player.loaded ? library.find(store.get().songId) : undefined;
-    const waiting = !resting && stepBeat === null && sequence.length > 0;
-    playPanel.update(pos, clock.paused, song ? { title: song.title, time: player.currentTime(), duration: player.duration } : null, waiting);
+    playPanel.update(pos, clock.paused, song ? { title: song.title, time: player.currentTime(), duration: player.duration } : null);
   } else if ((pos?.step ?? null) !== shownStep) {
     shownStep = pos?.step ?? null;
     const st = pos ? t().steps[pos.step] : null;

@@ -25,8 +25,7 @@ export interface PlayPanel {
   show(): void;
   hide(): void;
   setSequence(seq: readonly SequenceItem[]): void;
-  /** `waiting`: the song hasn't reached its first downbeat yet. */
-  update(pos: SequencePos | null, paused: boolean, song: PlayPanelSong | null, waiting: boolean): void;
+  update(pos: SequencePos | null, paused: boolean, song: PlayPanelSong | null): void;
 }
 
 /** Play mode controls: a translucent panel docked on the left, overlaying the stage. */
@@ -102,14 +101,14 @@ export function mountPlayPanel(panel: HTMLElement, handlers: PlayPanelHandlers):
       sequence = seq;
       renderSequence();
     },
-    update(pos, paused, song, waiting) {
-      const key = pos?.step ?? (waiting ? "waiting" : null);
+    update(pos, paused, song) {
+      const key = pos?.step ?? null;
       if (key !== shownStep) {
         shownStep = key;
         const st = pos ? t().steps[pos.step] : null;
         stepLabel.innerHTML = st
           ? `<span class="main">${st.name}</span><span class="sub">${st.feel}</span>`
-          : waiting ? `<span class="sub">${t().firstDownbeat}</span>` : "";
+          : "";
       }
       const index = pos?.index ?? -1;
       if (index !== shownIndex) revealInList(seqList, seqList.children[index]);

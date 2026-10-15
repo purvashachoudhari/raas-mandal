@@ -20,7 +20,7 @@ export interface Frame {
   scene: Readonly<Scene>;
   /** Beat position: drives every pulse, clap spark and hop. */
   beat: number;
-  /** Position in the step sequence (beats from the first downbeat), or null while waiting for it. */
+  /** Position in the step sequence (beats from the first downbeat, negative before it), or null at rest before any song. */
   stepBeat: number | null;
   /** Local tempo. */
   bpm: number;
@@ -44,8 +44,10 @@ const BLEND_BEATS = 0.25;
 const SPEED_EASE = 4;
 /** Circle speed (radians per second) below which a slowing circle stops outright. */
 const MIN_SPEED = 0.003;
-/** How quickly dancers ease between dancing and the resting pose (per second). */
+/** How quickly dancers ease from dancing back to the resting pose (per second). */
 const REST_EASE = 2.5;
+/** Seconds a song's start takes to bring dancers from rest to full pose and circle speed. */
+const START_S = 0.15;
 
 export interface Renderer {
   draw(frame: Frame): void;
@@ -61,6 +63,9 @@ export function createRenderer(canvas: HTMLCanvasElement, host: HTMLElement): Re
   let lastTime: number | null = null;
   /** 0 = dancing, 1 = resting pose. The page opens at rest. */
   let rest = 1;
+  /** When the dancers last set off from rest (seconds), for the short start ramp. */
+  let startedAt = -Infinity;
+  let lastMotion: Motion = "resting";
 
   function resize() {
     const r = host.getBoundingClientRect();
@@ -78,7 +83,14 @@ export function createRenderer(canvas: HTMLCanvasElement, host: HTMLElement): Re
     if (!ctx || !width || !height) return;
     const dt = lastTime === null ? 0 : Math.min(0.1, Math.max(0, time - lastTime));
     lastTime = time;
-    if (motion !== "paused") rest += ((motion === "resting" ? 1 : 0) - rest) * Math.min(1, dt * REST_EASE);
+    // Starting: straight into the dance within START_S, so the motion begins with the sound.
+    // Stopping: a slow ease back to rest.
+    if (motion === "dancing" && lastMotion === "resting") startedAt = time;
+    lastMotion = motion;
+    const startAge = time - startedAt;
+    const starting = startAge - dt < START_S; // through the first frame at or past the end of the ramp
+    if (motion === "dancing") rest = Math.max(0, rest - dt / START_S);
+    else if (motion === "resting") rest += (1 - rest) * Math.min(1, dt * REST_EASE);
     const restBlend = rest > 0.99 ? 1 : rest * rest * (3 - 2 * rest);
     const still = restPose(scene.sequence[0]?.step ?? null);
 
@@ -156,7 +168,7 @@ export function createRenderer(canvas: HTMLCanvasElement, host: HTMLElement): Re
     const blend = pos?.prev && pos.beatInStep < BLEND_BEATS ? pos.beatInStep / BLEND_BEATS : 1;
 
     // Partner swaps completed so far: when odd, partners stand in each other's places.
-    const swapped = stepBeat !== null && swapsBefore(scene.sequence, stepBeat) % 2 === 1;
+    const swapped = stepBeat !== null && (swapsBefore(scene.sequence, stepBeat) & 1) === 1;
     const partnerSparks: [number, number, number][] = []; // x, y, strength
 
     scene.circles.forEach((circle, ri) => {
@@ -166,7 +178,8 @@ export function createRenderer(canvas: HTMLCanvasElement, host: HTMLElement): Re
       const target = motion === "dancing" ? (sign * travel * (bpm / 60) * (s * 0.32)) / r : 0;
       // Paused: hold both, so resuming carries on at the same place and speed.
       if (motion !== "paused") {
-        speed[ri] += (target - speed[ri]) * Math.min(1, dt * SPEED_EASE);
+        if (starting) speed[ri] = target * Math.min(1, startAge / START_S);
+        else speed[ri] += (target - speed[ri]) * Math.min(1, dt * SPEED_EASE);
         if (target === 0 && Math.abs(speed[ri]) < MIN_SPEED) speed[ri] = 0; // come to a real stop
         angle[ri] += speed[ri] * dt;
       }

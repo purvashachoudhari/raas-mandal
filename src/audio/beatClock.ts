@@ -5,10 +5,10 @@ export interface BeatClock {
   /** Current beat position (beat index + fraction): drives every pulse, clap and hop. */
   beat(): number;
   /**
-   * Position in the step sequence, in beats counted from the first downbeat,
-   * or null before the first downbeat (the dancers wait for it).
+   * Position in the step sequence, in beats counted from the first downbeat. Negative before it:
+   * the dancers already dance at the song's tempo, so the sequence's first step lands on the downbeat.
    */
-  stepBeat(): number | null;
+  stepBeat(): number;
   /** Current local tempo in beats per minute. */
   bpm(): number;
   readonly paused: boolean;
@@ -68,9 +68,7 @@ export function createSongClock(player: YouTubePlayer, grid: () => BeatGrid | nu
     stepBeat() {
       const g = grid();
       const pos = position();
-      if (!g || g.beats.length < 2) return pos;
-      const fromDownbeat = pos - g.firstDownbeat;
-      return fromDownbeat >= 0 ? fromDownbeat : null;
+      return g && g.beats.length >= 2 ? pos - g.firstDownbeat : pos;
     },
     bpm() {
       const g = grid();
